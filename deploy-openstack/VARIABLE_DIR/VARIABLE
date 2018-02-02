@@ -1,0 +1,121 @@
+#!/bin/bash 
+#variable for all script 
+#modify by keanlee on June 4th of 2017
+
+#----------------Edit the below variable to adapt your Env---------
+
+###########################################################################################################
+#
+#
+#---------------Please Follow The Example To List The Ip Address#############Must change 
+#
+#
+###########################################################################################################
+
+#--------------------controller node's ip list here -------------------
+#galera node's ip list here,for HA mode just support 3 nodes controller deploy 
+#if nework ip same as the controller ip ,deployer will be deploy controller node as network node
+CONTROLLER_IP=(
+)
+
+
+#------------------Compute node ip list  here -----------------------------
+#if nework ip same as the compute ip, deployer will be deploy compute node as network node
+#if block node's ip same as the compute ip, deployer will be deploy compute node as block node
+COMPUTE_NODE_IP=(
+
+)
+
+
+#-----------------Network node ip list here -------------------------------
+# Sigle network list here 
+#if nework ip same as the controller ip ,deployer will be deploy controller node as network node
+NETWORK_NODE_IP=(
+
+)
+
+#------------------Block node ip list here --------
+#if block node's ip same as the compute ip, deployer will be deploy compute node as block node
+BLOCK_NODE_IP=(
+
+)
+
+#management network card name, both controller and all slave node (compute ,block ,network nodes) use this name for configuration 
+#This interface use for openstack Management and api network 
+MGMT_IP_DEVICE=
+
+
+#private network interface , you can use MGMT_IP_DEVICE if you reouce is not enough
+PRIVATE_IP_DEVICE=
+
+#Add a port to the external bridge that connects to the physical external network inter-face
+#Replace PROVIDER_INTERFACE with the name of the underlying interface that handles provider networks. For example, eth1
+PROVIDER_INTERFACE=
+
+#The block block interface,Default:MGMT_IP_DEVICE
+BLOCK_IP_DEVICE=${MGMT_IP_DEVICE}
+
+
+#The VIP use for all slave node , HA also use this Virtual Ip Address
+#The vip must be a network segment with controller's ip
+#For no controller ha mode,please list it as blank
+CONTROLLER_VIP=
+
+#The cidr postfix of controller vip,must same as the all controller ip's cidr,for example 24  
+CIDR_POSTFIX=
+
+
+
+#NTP server IP
+NTP_SERVER_IP=
+
+
+#-----------PASSWORD FOR EACH NODE ----Note:Make sure all node as same password 
+#For Controller Compute node.Make ssh-key for each node
+PASSWORD_EACH_NODE=
+
+#BLOCK-NODE ONLY---
+#Note:  just support one disk on each block node right now 
+PARTITION=(
+vdb
+)
+
+#set the dns server ip here 
+DNS_SERVER=114.114.114.114
+
+
+#---------------------------------------Glance Images store HA Option ---------------------
+#Do you want to use glusterfs as glance store image ?   (yes/no)       --------------------
+GLUSTERFS_USE_FOR_CONTROLLER=yes
+
+#This will be use for gluster fs as share disk                   --------------------------
+GLUSTERFS_USE_DISK=vdb
+
+#Which dir you want to it's as the share foloder                   ------------------------
+GLUSTERFS_SHARE_DIR=/var/lib/glance/images/
+#------------------------------------------------------------------------------------------
+
+
+
+#Option OVS or linux-bridge
+#so far not support linux-bridge
+NEUTRON_L2_AGENT=OVS
+
+#----------------------------------------------------------------------------
+#--------------external network create -------------
+#--------list blank if you want to set the floating up manual 
+#-------Floating ip here:
+EXTERNAL_NETWORK_CIDR=
+FLOATING_IP_START=
+FLOATING_IP_END=
+EXTERNAL_NETWORK_GATEWAY=
+
+#Do you want to enable ssh key for root user on each compute? that means you can ssh with root to each compute without password(support value:yes/no) when you at one of them 
+ROOT_SSH_COMPUTE=yes
+
+#Which directory you want to store the admin-openrc file ?
+OPENRC_DIR=/root
+
+#list controller host name,for galera cluster that must list the hostname here (note: no need type here,this will auto fill out after check nodes info)  
+#CONTROLLER-HOSTNAME-HERE
+
