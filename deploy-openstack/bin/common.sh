@@ -202,7 +202,7 @@ if [[ $(getenforce) = "Enforcing" ]];then
     echo $GREEN The current selinux Status:$NO_COLOR $YELLOW $(getenforce) $NO_COLOR 
 fi
 
-which gzexe && yum erase gzexe -y 1>/dev/null
+#which gzexe 1>/dev/null 2>&1 && yum erase gzexe -y 1>/dev/null  2>&1
 systemctl status NetworkManager 1>/dev/null 2>&1
 if [[ $? = 0 ]];then
     echo $BLUE Uninstall NetworkManager ... $NO_COLOR
