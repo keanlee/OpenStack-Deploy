@@ -1,0 +1,59 @@
+[ml2]
+
+
+type_drivers = local,flat,vlan,gre,vxlan,geneve
+
+
+
+tenant_network_types = vxlan
+
+
+mechanism_drivers = openvswitch,l2population
+
+path_mtu = 0
+
+
+
+
+
+extension_drivers = port_security
+
+
+[ml2_type_flat]
+
+
+
+[ml2_type_vlan]
+
+
+network_vlan_ranges = default:1:4091,external 
+
+
+[ml2_type_vxlan]
+
+
+
+vni_ranges =100:1000
+
+vxlan_group = 224.0.0.1
+
+
+
+[securitygroup]
+
+firewall_driver = neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
+
+enable_security_group = True
+
+
+
+
+
+[ovs]
+bridge_mappings = external:br-ex
+
+
+[agent] 
+enable_distributed_routing = True
+l2_population = True
+arp_responder = True
