@@ -24,18 +24,32 @@
 # 
 # 
 ########################################################################################################### 
+# ansi colors for formatting heredoc
+ESC=$(printf "\e")
+GREEN="$ESC[0;32m"
+NO_COLOR="$ESC[0;0m"
+RED="$ESC[0;31m"
+MAGENTA="$ESC[0;35m"
+YELLOW="$ESC[0;33m"
+BLUE="$ESC[0;34m"
+WHITE="$ESC[0;37m"
+#PURPLE="$ESC[0;35m"
+CYAN="$ESC[0;36m"
 
+
+#The VARIABLE file DIR 
 THE_VARIABLE_DIR=$(find / -name 'VARIABLE_DIR')
-CONFIG_FILE_DIR_HA=${THE_VARIABLE_DIR}
-CONFIG_FILE_DIR=${THE_VARIABLE_DIR}
+CONFIG_FILE_DIR_HA=..
+CONFIG_FILE_DIR=.
 source $(find / -name 'VARIABLE')
 
 
 
 #set the rabbitmq host IP and password as below  
 RABBIT_HOSTS=$(ip addr show $MGMT_IP_DEVICE | grep 'inet[^6]' | sed -n '1p' | awk '{print $2}' | awk -F "/" '{print $1}') 
-RABBIT_PASS=rabbitmq 
+RABBIT_PASS=rabbitmqpass
  
+#----------------------------------KEEPALIVED----------------------------
 #router id for the keepavlied  
 #The range is: 1-255 
 ROUTER_ID=123 
@@ -45,7 +59,13 @@ PRIORITY_NUMS=(
 45 
 )
 
-PRODUCT_NAME=OpenStack
+
+#openstack componment here 
+#default 
+if_enable_cinder=no
+if_enable_heat=yes
+
+
 #--------------------Keystone ------------------
 #set keystone database password 
 KEYSTONE_DBPASS=keystone_dbpassword
@@ -57,7 +77,7 @@ fi
 #set mariadb password
 MARIADB_PASSWORD=galera_admin
 
-#the admin password 
+#--------------------the admin password 
 ADMIN_PASS=adminpass
 DEMO_PASS=demo
 
@@ -72,6 +92,12 @@ GLANCE_DBPASS=glancedb
  
 #glance password use for keystone 
 GLANCE_PASS=glance 
+
+
+#Which dir you want to it's as the share foloder    for the glusterfs setup use                ------------------------
+GLUSTERFS_SHARE_DIR=/var/lib/glance/images/
+#------------------------------------------------------------------------------------------
+
  
 #-----------------Nova for controller node -------- 
 #both nova and nova_api database use this 
@@ -126,29 +152,28 @@ BLOCK_IP=$(ip addr show ${BLOCK_IP_DEVICE} | grep 'inet[^6]' | sed -n '1p' | awk
 #-------------------------------------nova compute node ------------------------------------------------------
 COMPUTE_MANAGEMENT_INTERFACE_IP_ADDRESS=$(ip addr show $MGMT_IP_DEVICE | grep 'inet[^6]' | sed -n '1p' | awk '{print $2}' | awk -F "/" '{print $1}')
 
-#-----------------Heat -------------------------------------
-HEATDB_PASS=heatdb
-HEAT_PASS=heatpass
 
-#For No ha mode
+#-----------------Heat -------------------------------------
+HEAT_DBPASS=heatdbpass
+HEAT_PASS=heatpas
+HEAT_DOMAIN_PASS=heatdomainpas
+
+
+
+#------------For No ha mode
 if [[ ${CONTROLLER_VIP} = "" ]];then
     CONTROLLER_VIP=${CONTROLLER_IP[0]}
 fi 
 
-# ansi colors for formatting heredoc
-ESC=$(printf "\e")
-GREEN="$ESC[0;32m"
-NO_COLOR="$ESC[0;0m"
-RED="$ESC[0;31m"
-MAGENTA="$ESC[0;35m"
-YELLOW="$ESC[0;33m"
-BLUE="$ESC[0;34m"
-WHITE="$ESC[0;37m"
-#PURPLE="$ESC[0;35m"
-CYAN="$ESC[0;36m"
+
+
+#-----------------------------------------------------------------------------------
+#
+#-------------------------function is all below ------------------------------------
+#
+#-----------------------------------------------------------------------------------
 
 #-----------------------------yum repos configuration ---------------------------
-
 function yum_repos(){
 if [[ ! -d /etc/yum.repos.d/bak/ ]];then
     mkdir /etc/yum.repos.d/bak/
@@ -266,7 +291,8 @@ else
     fi
 fi
 
-systemctl enable ntpd.service 1>/dev/null 2>&1 && 
+systemctl enable ntpd.service 1>/dev/null 2>&1  
+
 echo $BLUE Starting the ntpd.service $NO_COLOR
 systemctl start ntpd.service
     debug "$?" "start ntpd.service failed "
@@ -274,12 +300,12 @@ systemctl start ntpd.service
 
 #-----------------------------DNS server ----------------------------------
 function dns_server(){
-echo > ./resolve.conf
-    cat > ./resolve.conf <<EOF
+echo > ./resolv.conf
+    cat > ./resolv.conf <<EOF
 #Create this file by keanlee's script
 nameserver      $DNS_SERVER 
 EOF
-mv -f ./resolve.conf /etc
+mv -f ./resolv.conf /etc
 }
 
 #----------------------------------------mariadb install ------------------------------------------------
@@ -365,6 +391,7 @@ echo $DB_SIZE  | awk  '{print $'$NUMS'}'
 #-------------------------------------database create function --------------------------
 function database_create(){
 #create database and user in mariadb for openstack component
+#How to invoke this function? 
 #$1 is the database name (comonent name and usename) 
 #$2 is password of database
 DATABASE_NAME=$(mysql -uroot -p$MARIADB_PASSWORD -e "show databases" | grep $1 | wc -l)
@@ -375,9 +402,9 @@ else
     local USER=$1
         if [[ $1 = nova_api ]];then
             USER=nova
-        fi 
+fi 
 
-    mysql -uroot -p$MARIADB_PASSWORD -e "CREATE DATABASE $1;GRANT ALL PRIVILEGES ON $1.* TO '$USER'@'localhost' \
+mysql -uroot -p$MARIADB_PASSWORD -e "CREATE DATABASE $1;GRANT ALL PRIVILEGES ON $1.* TO '$USER'@'localhost' \
 IDENTIFIED BY '$2';GRANT ALL PRIVILEGES ON $1.* TO '$USER'@'%'  IDENTIFIED BY '$2';flush privileges;"  
         debug "$?" "Create database $1 Failed "
 fi
@@ -472,12 +499,15 @@ systemctl start memcached.service
     debug "$?"  "Start memcached.service failed "
 }
 
+
+
 #----------------------------create_service_credentials----------------------
 function create_service_credentials(){
 #This function need two parameter :
 #$1 is the service password 
 #$2 is the service name ,example nova glance neutron cinder. 
 
+#This judgment is very simple now, will be change by the future  
 if [[ ${#CONTROLLER_IP[*]} -eq 3 ]] && [[ ${MGMT_IP} != ${CONTROLLER_IP[0]} ]];then 
     debug "notice" "Skip to create the $2 service credentials"
 else 
@@ -511,6 +541,7 @@ __EOF__
     neutron)
         local SERVICE=Networking
         local SERVICE1=network 
+
         local PORTS=9696
         ;;
     cinder)
@@ -518,13 +549,27 @@ __EOF__
         local PORTS=8776
         local SERVICE1=volume
         ;;
+    heat)
+#new add heat , need to testing 
+        local SERVICE=Orchestration
+        local SERVICE1=orchestration
+        local PORTS=8004
+        local PORTS1=8000
+        ;;
     *)
         debug "1" "The second parameter is the service name:nova glance neutron cinder etc,your $2 is unkown "
         ;;
     esac 
     sleep 2
+   
+    echo $BLUE Creating the $2 service entities: $NO_COLOR 
     openstack service create --name $2 --description "OpenStack ${SERVICE}" ${SERVICE1}
         debug "$?" "openstack service $2 create failed "
+    
+    if [[ $2 = heat ]];then 
+        echo $BLUE Creating the heat-cfn service entities: $NO_COLOR 
+        openstack service create --name heat-cfn  --description "Orchestration"  cloudformation 
+    fi
 
     if [[ $2 = cinder ]];then 
         openstack service create --name cinderv2 --description "OpenStack ${SERVICE}" volumev2
@@ -549,7 +594,42 @@ __EOF__
         openstack endpoint create --region RegionOne volumev2 internal http://{$CONTROLLER_VIP}:${PORTS}/v2/%\(tenant_id\)s
         openstack endpoint create --region RegionOne volumev2 admin http://${CONTROLLER_VIP}:${PORTS}/v2/%\(tenant_id\)s
             debug "$?" "openstack endpoint create $2 failed "
+    elif [[ $2 = heat ]];then 
+        echo $BLUE Creating the Orchestration service API endpoints: $NO_COLOR 
+        openstack endpoint create --region RegionOne orchestration public http://${CONTROLLER_VIP}:${PORTS}/v1/%\(tenant_id\)s
+        openstack endpoint create --region RegionOne orchestration internal http://${CONTROLLER_VIP}:${PORTS}/v1/%\(tenant_id\)s
+      	openstack endpoint create --region RegionOne orchestration admin http://${CONTROLLER_VIP}:${PORTS}/v1/%\(tenant_id\)s
+        
+        openstack endpoint create --region RegionOne cloudformation public http://${CONTROLLER_VIP}:${PORTS1}/v1
+        openstack endpoint create --region RegionOne cloudformation internal http://${CONTROLLER_VIP}:${PORTS1}/v1
+        openstack endpoint create --region RegionOne cloudformation admin http://${CONTROLLER_VIP}:${PORTS1}/v1
 
+        #Orchestration requires additional information in the Identity service to manage stacks. To add this information, complete these steps:
+        echo $BLUE Creating the heat domain that contains projects and users for stacks: $NO_COLOR 
+        openstack domain create --description "Stack projects and users" heat
+        
+        echo $BLUE Creating the heat_domain_admin user to manage projects and users in the heat domain: $NO_COLOR 
+        openstack user create --domain heat  --password  $HEAT_DOMAIN_PASS  heat_domain_admin  
+        
+        echo $BLUE Add the admin role to the heat_domain_admin user in the heat domain to \
+enable administrative stack management privileges by the heat_domain_admin user: $NO_COLOR 
+        openstack role add --domain heat --user-domain heat --user heat_domain_admin admin
+       
+        echo $BLUE Creating the heat_stack_owner role: $NO_COLOR 
+        openstack role create heat_stack_owner
+        
+        echo $BLUE add the heat_stack_owner role to the demo project and user to enable stack management by the demo user: $NO_COLOR 
+        openstack role add --project demo --user demo heat_stack_owner
+
+        echo $BLUE Creating the heat_stack_user role: $NO_COLOR 
+        openstack role create heat_stack_user
+
+        echo $GREEN Completed added additional information in keystone for Orchestration $NO_COLOR 
+
+        #Note:
+        #The Orchestration service automatically assigns the heat_stack_user role to users that it creates during stack 
+        #deployment. By default, this role restricts API <Application Programming Interface (API)> operations. 
+        #To avoid conflicts, do not add this role to users with the heat_stack_owner role.
     else 
         openstack endpoint create --region RegionOne ${SERVICE1} public http://${CONTROLLER_VIP}:${PORTS}
         openstack endpoint create --region RegionOne ${SERVICE1} internal http://${CONTROLLER_VIP}:${PORTS}

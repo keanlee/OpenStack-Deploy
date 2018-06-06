@@ -104,7 +104,7 @@ else
     #-f my.key tells it to store the key into my.key (change as you see fit).
 fi
 
-which sshpass 1>/dev/null 2>&1 || rpm -ivh ${THE_VARIABLE_DIR}/lib/sshpass* 1>/dev/null 2>&1
+which sshpass 1>/dev/null 2>&1 || rpm -ivh ${CONFIG_FILE_DIR}/lib/sshpass* 1>/dev/null 2>&1
 echo $BLUE Copying public key to compute hosts:  $NO_COLOR
 if [[ -e  ~/.ssh/known_hosts ]];then
     debug "notice" "The know_hosts file exists "

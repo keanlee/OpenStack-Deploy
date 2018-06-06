@@ -34,6 +34,11 @@
 
 #network virtaul device introduction:
 #http://blog.csdn.net/tantexian/article/details/45395075
+#通过使用 DVR，三层的转发（L3 Forwarding）和 NAT 功能都会被分布到计算节点上，这意味着计算节点也有了网络节点的功能。
+#但是，DVR 依然不能消除集中式的 Virtual Router，这是为了节省宝贵的 IPV4 公网地址，所有依然将 SNAT 放在网络节点上提供。这样，计算和网络节点就看起来如下：
+#IF_ENABLE_NEUTRON_HA_DVR=yes  will be install neutron with DVR,ALL compute node as a network node 
+
+
 
 #----------------------------------------------------neutron for controller node ----------------------
 function neutron_controller(){
@@ -162,7 +167,7 @@ if [[ ${#CONTROLLER_IP[*]} -eq 3 ]];then
 fi
 
 cp -f ${CONFIG_FILE_DIR}/etc/compute/neutron/openvswitch_agent.ini  /etc/neutron/plugins/ml2
-sed -i "s/LOCAL_IP/$PRIVATE_IP/g" /etc/neutron/plugins/ml2/openvswitch_agent.ini
+sed -i "s/LOCAL_IP/${PRIVATE_IP}/g" /etc/neutron/plugins/ml2/openvswitch_agent.ini
 sed -i "s/br-provider/${br_provider}/g"  /etc/neutron/plugins/ml2/openvswitch_agent.ini
 
 sed -i "s/NEUTRON_PASS/$NEUTRON_PASS/g"  /etc/nova/nova.conf
@@ -264,7 +269,7 @@ sed -i "s/valuesnumber/${HALFcpus}/g" /etc/neutron/metadata_agent.ini
 
 #The ML2 plug-in uses the Open vSwitch (OVS) mechanism (agent) to build the virtual net-working framework for instances
 cp -f ${CONFIG_FILE_DIR}/etc/network/openvswitch_agent.ini  /etc/neutron/plugins/ml2/
-sed -i "s/LOCAL_IP/$PRIVATE_IP/g"  /etc/neutron/plugins/ml2/openvswitch_agent.ini
+sed -i "s/LOCAL_IP/${PRIVATE_IP}/g"  /etc/neutron/plugins/ml2/openvswitch_agent.ini
 sed -i "s/br-provider/$br_provider/g" /etc/neutron/plugins/ml2/openvswitch_agent.ini
 chown -R root:neutron /etc/neutron/
 
@@ -336,6 +341,72 @@ __EOF__
 }
 
 
+function enable_dvr(){
+#refer https://docs.openstack.org/liberty/networking-guide/scenario-dvr-ovs.html#example-configuration
+#this function can enable the DVR with openstack 
+#this function default as think all network componement as installed 
+if [[ $1 = controller ]];then 
+    #for controller as network  node 
+    echo $BLUE Change the config to match the DVR mode on controller node $NO_COLOR 
+    echo "##-----------DVR MODE---------------- " >> /etc/neutron/neutron.conf
+    echo "router_distributed = True" >> /etc/neutron/neutron.conf
+    echo "l3_ha = True "  >> /etc/neutron/neutron.conf
+    echo "l3_ha_net_cidr = 169.254.192.0/18"  >>/etc/neutron/neutron.conf
+    #Set automatic L3 agent failover for routers
+    echo "allow_automatic_l3agent_failover= True" >>/etc/neutron/neutron.conf 
+
+    echo "max_l3_agents_per_router = 3" >>/etc/neutron/neutron.conf 
+     
+    #Minimum number of network nodes to use for the HA router. A new router can be created only if this number of network nodes are available.
+    echo "min_l3_agents_per_router = 2" >>/etc/neutron/neutron.conf 
+
+    #since controler node as network node when dvr mode 
+    echo "[ovs]" >> /etc/neutron/plugins/ml2/ml2_conf.ini
+    echo "local_ip = TUNNEL_INTERFACE_IP_ADDRESS" >> /etc/neutron/plugins/ml2/ml2_conf.ini
+    echo "bridge_mappings = external:br-ex" >> /etc/neutron/plugins/ml2/ml2_conf.ini
+
+    echo "[agent] " >> /etc/neutron/plugins/ml2/ml2_conf.ini
+    echo "enable_distributed_routing = True" >> /etc/neutron/plugins/ml2/ml2_conf.ini
+    echo "tunnel_types = vxlan" >> /etc/neutron/plugins/ml2/ml2_conf.ini
+    echo "l2_population = True" >> /etc/neutron/plugins/ml2/ml2_conf.ini
+
+    sed -i "s/TUNNEL_INTERFACE_IP_ADDRESS/${PRIVATE_IP}/g" /etc/neutron/plugins/ml2/ml2_conf.ini
+
+    #for network node 
+    sed -i "s/legacy/dvr_snat/g" /etc/neutron/l3_agent.ini
+    
+    if [[ ${MGMT_IP} = ${CONTROLLER_IP[2]} ]];then
+        source ${OPENRC_DIR}/admin-openrc
+        echo $BLUE Enable the router ha $NO_COLOR 
+        neutron router-create HA-of-Router --distributed=True --ha=True
+    fi
+    #The external_network_bridge option intentionally contains no value.
+    #sed -i "s/br-ex/ /g" /etc/neutron/l3_agent.ini 
+    #confirm later 
+    echo $BLUE Restart service about neutron $NO_COLOR 
+    systemctl restart neutron-openvswitch-agent.service neutron-dhcp-agent.service \
+neutron-metadata-agent.service  openvswitch.service  neutron-l3-agent.service
+elif [[ $1 = compute ]];then 
+    echo $BLUE Change the config to match the DVR mode on compute node $NO_COLOR 
+    #for compute node 
+    sed -i "s/legacy/dvr/g" /etc/neutron/l3_agent.ini
+    echo "enable_distributed_routing = True" >>/etc/neutron/plugins/ml2/ml2_conf.ini  
+    echo $BLUE Restart service about neutron $NO_COLOR 
+    systemctl restart neutron-openvswitch-agent.service neutron-dhcp-agent.service \
+neutron-metadata-agent.service  openvswitch.service  neutron-l3-agent.service
+else 
+    debug "1" "unsupport parameter you typed "
+fi 
+
+#ior dhcp agent 
+#echo "dhcp_agents_per_network = dhcp_agent_number"  >>/etc/neutron/neutron.conf  #more than one to match our deployment 
+
+#dhcp_agent_numbers=${#COMPUTE_NODE_IP[*]}
+#sed -i "s/dhcp_agent_number/${dhcp_agent_numbers}/g" /etc/neutron/neutron.conf
+#because duplicate 
+}
+
+
 
 #--------------------------------------------Main--------------------------------------------
 case $1 in
@@ -352,13 +423,19 @@ controller-as-network-node)
     echo $YELLOW You will deploy network node on controller ... $NO_COLOR
     neutron_controller
     neutron_network_node controller 
+    if [[ $IF_ENABLE_NEUTRON_HA_DVR = yes ]];then 
+        enable_dvr controller 
+    fi 
     ;;
 compute-as-network-node)
     echo $YELLOW You will deploy network node on compute ... $NO_COLOR
     neutron_compute
     neutron_network_node compute
+    if [[ $IF_ENABLE_NEUTRON_HA_DVR = yes ]];then 
+        enable_dvr compute  
+    fi 
     ;;
 *)
     debug "1" "neutron.sh just support controller ,network , compute and controller-as-network-node neutron_network_node compute parameter, your $1 is not support "
     ;;
-esac
+esac 

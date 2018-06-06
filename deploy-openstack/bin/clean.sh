@@ -13,10 +13,27 @@
 # under the License
 #
 #clean the env of openstack 
-yum erase openstack-selinux python-openstackclient 1>/dev/null
-echo $BLUE Begin clean the env ... $NO_COLOR
+#yum erase openstack-selinux python-openstackclient 1>/dev/null
+########################################################################################################### 
+# ansi colors for formatting heredoc
+ESC=$(printf "\e")
+GREEN="$ESC[0;32m"
+NO_COLOR="$ESC[0;0m"
+RED="$ESC[0;31m"
+MAGENTA="$ESC[0;35m"
+YELLOW="$ESC[0;33m"
+BLUE="$ESC[0;34m"
+WHITE="$ESC[0;37m"
+#PURPLE="$ESC[0;35m"
+CYAN="$ESC[0;36m"
 
-#rm -rf /etc/yum.repos.d/*
+echo $BLUE Begin clean the $(hostname) env ... $NO_COLOR
+sed -i '3,$'d /etc/hosts
+rm -rf /etc/yum.repos.d/*
+sed -i '4,$'d /etc/sysctl.conf
+sed -i '1,$'d  ~/.ssh/known_hosts
+
+yum clean all 
 systemctl stop mariadb  1>/dev/null   
 yum erase -y mariadb-* mariadb-libs 1>/dev/null   
 yum erase -y python2-PyMySQL 1>/dev/null  
@@ -34,6 +51,8 @@ rm -rf /etc/ntp.conf.rpmsave
 rabbitmqctl  delete_user openstack 1>/dev/null   
 rabbitmqctl  list_users  1>/dev/null   
 systemctl stop rabbitmq-server
+rm -rf /var/lib/rabbitmq/
+rm -rf /etc/rabbitmq/
 rm -rf /var/log/rabbitmq/
 yum erase rabbitmq-server -y 1>/dev/null  
 
@@ -103,4 +122,12 @@ yum erase haproxy keepalived -y 1>/dev/null
 rm -rf /etc/keepalived/*
 rm -rf /etc/haproxy/* 
 rm -rf ~/.ssh/id_rsa* 
+
+#systemctl stop glusterd 
+#yum erase glusterfs-server  -y 1>/dev/null 
+
+
+
+
+
 

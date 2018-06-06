@@ -1,1 +1,1 @@
-###This dir use to save deploy logs
+###This dir is for to store the logs of deploying 

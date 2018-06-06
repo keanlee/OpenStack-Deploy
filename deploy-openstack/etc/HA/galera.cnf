@@ -124,3 +124,4 @@ wsrep_sst_method=rsync
 # Depends on SST method. For mysqldump method it is root:<root password>
 wsrep_sst_auth=root:
 
+max_connections=4089

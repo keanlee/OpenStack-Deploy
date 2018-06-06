@@ -52,6 +52,7 @@ sed -i "s/Hostname=Zabbix\ server/Hostname=$HOSTNAME/g"  /etc/zabbix/zabbix_agen
 sed -i "167 i HostMetadata=$METADATA"  /etc/zabbix/zabbix_agentd.conf
 
 #--------------iptables setip------
+function firewall_setup(){
 STATUS=$(systemctl status firewalld | grep Active | awk -F ":" '{print $2}' | awk '{print $1}')
 if [[ $STATUS = active ]];then
     firewall-cmd --zone=public --add-port=10050/tcp --permanent 1>/dev/null 2>&1
@@ -60,6 +61,9 @@ else
     iptables -A  INPUT -p tcp --dport 10050 -j ACCEPT
     iptables-save > /etc/sysconfig/iptables
 fi
+}
+firewall_setup
+
 
 #--------------add daemon iteam script for each host------------------- 
 mkdir -p /etc/zabbix/scripts

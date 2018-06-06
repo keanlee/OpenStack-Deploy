@@ -11,6 +11,9 @@
 #
 #
 ###########################################################################################################
+#The  hostname will be show as product_name-nodeX-controller/compute/network/block,such as OpenStack-node1-controller1
+PRODUCT_NAME=OpenStack
+
 
 #--------------------controller node's ip list here -------------------
 #galera node's ip list here,for HA mode just support 3 nodes controller deploy 
@@ -45,7 +48,8 @@ BLOCK_NODE_IP=(
 MGMT_IP_DEVICE=
 
 
-#private network interface , you can use MGMT_IP_DEVICE if you reouce is not enough
+#private network interface , you can use MGMT_IP_DEVICE if your reouce is not enough
+#This device need with ip address 
 PRIVATE_IP_DEVICE=
 
 #Add a port to the external bridge that connects to the physical external network inter-face
@@ -67,7 +71,7 @@ CIDR_POSTFIX=
 
 
 #NTP server IP
-NTP_SERVER_IP=
+NTP_SERVER_IP=182.92.12.11
 
 
 #-----------PASSWORD FOR EACH NODE ----Note:Make sure all node as same password 
@@ -86,20 +90,20 @@ DNS_SERVER=114.114.114.114
 
 #---------------------------------------Glance Images store HA Option ---------------------
 #Do you want to use glusterfs as glance store image ?   (yes/no)       --------------------
-GLUSTERFS_USE_FOR_CONTROLLER=yes
+GLUSTERFS_USE_FOR_CONTROLLER=no
 
 #This will be use for gluster fs as share disk                   --------------------------
 GLUSTERFS_USE_DISK=vdb
-
-#Which dir you want to it's as the share foloder                   ------------------------
-GLUSTERFS_SHARE_DIR=/var/lib/glance/images/
-#------------------------------------------------------------------------------------------
-
 
 
 #Option OVS or linux-bridge
 #so far not support linux-bridge
 NEUTRON_L2_AGENT=OVS
+
+
+#Do you want to enable DVR funcation, only support yes or no
+IF_ENABLE_NEUTRON_HA_DVR=no
+
 
 #----------------------------------------------------------------------------
 #--------------external network create -------------

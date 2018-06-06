@@ -40,6 +40,7 @@ Deploy-compute-node
 Deploy-block-node
 Deploy-network-node
 Deploy-galera-cluster
+Clean-Env
 Exit
 )
 source  ${TOP_DIR}/deploy-openstack/bin/common.sh  
@@ -74,6 +75,9 @@ $MAGENTA========================================================================
            ${MAGENTA}8. Deploy-all
               $BLUE#To deploy controller node,network node,compute node,block node$NO_COLOR${MAGENTA}
           
+          ${MAGENTA}9. Clean-Env
+              $BLUE#This option will uninstall all openstack pacakge and remove it's config file, only for testing  $NO_COLOR${MAGENTA}
+
 ==================================================================================
 $NO_COLOR
 __EOF__
@@ -134,7 +138,7 @@ echo $BLUE Generating public/private rsa key pair $NO_COLOR
 ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa 1>/dev/null
 #-N "" tells it to use an empty passphrase (the same as two of the enters in an interactive script)
 #-f my.key tells it to store the key into my.key (change as you see fit).
-which sshpass 1>/dev/null 2>&1 || rpm -ivh ${THE_VARIABLE_DIR}/lib/sshpass* 1>/dev/null 2>&1   
+which sshpass 1>/dev/null 2>&1 || rpm -ivh ./deploy-openstack/lib/sshpass* 1>/dev/null 2>&1   
 
 echo -n $BLUE Please type the correct password for server:  $NO_COLOR
 read Password
@@ -240,8 +244,25 @@ if [[ ${#BLOCK_NODE_IP[*]} -ge 1 ]];then
 fi
 }
 
+function compute_root_ssh_key(){
+if [[ ${ROOT_SSH_COMPUTE} = "no" ]];then
+    for ips in ${COMPUTE_NODE_IP[*]};do
+        ssh -n root@${ips} "rm -rf ~/.ssh/authorized_keys"
+    done
+    debug "notice" "You have disabled the ssh key for \"root\" on all compute node"
+elif [[ ${ROOT_SSH_COMPUTE} = "yes" ]];then
+    debug "notice" "You have enabled the ssh key for \"root\" on all compute node"
+else
+    debug "warning" "Unknow value for Funcation :ROOT_SSH_COMPUTE !!!"
+fi
+
+}
 
 
+#
+#
+#===================================DEPLOY PART===================================================================
+#                                  
 #----------------------------------controller node deploy ---------------------
 function controller(){
 #deploy controller node and galera node 
@@ -252,10 +273,10 @@ elif [[ $1 = "controller-as-network-node" ]];then
     local SCRIPT=install.sh
     local VALUE=controller-as-network-node
 elif [[ $1 = "HA-ALL" ]];then 
-    local SCRIPT=bin/ha_proxy.sh HA_ALL
+    local SCRIPT=bin/ha_proxy.sh 
     local VALUE=HA_ALL
 elif [[ $1 = "galera" ]];then
-    local SCRIPT=bin/ha_proxy.sh galera
+    local SCRIPT=bin/ha_proxy.sh 
     local VALUE=galera
 else 
     debug "1" "function:controller cannot support your parameter "
@@ -265,8 +286,8 @@ for ips in ${CONTROLLER_IP[*]}; do scp -r deploy-openstack/ \
 $ips:/home/; \
     debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
 
-for ips in ${CONTROLLER_IP[*]}; do ssh -n $ips /bin/bash /home/deploy-openstack/${SCRIPT} \
-${VALUE} | tee ./log/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
+for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/${SCRIPT} \
+${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
     debug "$?" "bash remote execute on remote host <$ips> error "; done
 
 for ips in ${CONTROLLER_IP[*]}; do ssh -n $ips 'rm -rf /home/deploy-openstack/';done
@@ -292,7 +313,7 @@ if [[ $1 = "block" ]];then
         debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1 
 
     for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
-${VALUE} | tee ./log/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
+${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
         debug "$?" "bash remote execute on remote host <$ips> error "; done
 
     for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done
@@ -300,25 +321,11 @@ else
     for ips in ${COMPUTE_NODE_IP[*]}; do scp -r deploy-openstack/ $ips:/home/; \
         debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1 
     for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
-${VALUE} | tee ./log/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
+${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
         debug "$?" "bash remote execute on remote host <$ips> error "; done
 
     for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done
 fi
-}
-
-function compute_root_ssh_key(){
-if [[ ${ROOT_SSH_COMPUTE} = "no" ]];then
-    for ips in ${COMPUTE_NODE_IP[*]};do
-        ssh -n root@${ips} "rm -rf ~/.ssh/authorized_keys"
-    done
-    debug "notice" "You have disabled the ssh key for \"root\" on all compute node"
-elif [[ ${ROOT_SSH_COMPUTE} = "yes" ]];then
-    debug "notice" "You have enabled the ssh key for \"root\" on all compute node"
-else
-    debug "warning" "Unknow value for Funcation :ROOT_SSH_COMPUTE !!!"
-fi
-
 }
 
 #----------------------------------network node deploy-----------------------
@@ -328,13 +335,15 @@ for ips in ${NETWORK_NODE_IP[*]} ; do scp -r deploy-openstack/ $ips:/home/; \
     debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
 
 for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
-network | tee ./log/network-node-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log;done 
+network | tee ${TOP_DIR}/logs/network-node-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log;done 
 
 for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done 
 }
 
-
-
+#
+#
+#==========================================CHECKING PART===============================================================
+#
 #-----------------------------show target host system info-------------------------------------
 function check_info(){
 #check the target host system infor
@@ -395,7 +404,11 @@ if [[ ${#BLOCK_NODE_IP[*]} -ge 1 ]];then
 fi
 }
 
-
+#
+#
+#=====================================================MAIN===================================================
+#
+#
 cat 1>&2 <<__EOF__
 $MAGENTA===============================================================================
                 Thanks you use this program to deploy OpenStack!!!
@@ -415,7 +428,11 @@ done
             if [[ ${#CONTROLLER_IP[*]} -eq 3 ]] && [[ ${#CONTROLLER_HOSTNAME[*]} -eq 3 ]];then
                 if [[ $(echo $CONTROLLER_VIP | awk -F "." '{print $1 $2 }') -eq $(echo ${CONTROLLER_IP[0]} | awk -F "." '{print $1 $2 }' ) ]];then
                     controller HA-ALL
-                    controller
+                    if [[ $IF_ENABLE_NEUTRON_HA_DVR = yes ]];then 
+                        controller  controller-as-network-node 
+                    else  
+                        controller
+                    fi
                 else
                     debug "1" "The ${YELLOW}CONTROLLER_VIP${RED} must be a network segment with controller's ip"
                 fi
@@ -461,7 +478,10 @@ done
             elif [[ ${NETWORK_NODE_IP[0]} != ${COMPUTE_NODE_IP[0]} ]] && [[ ${COMPUTE_NODE_IP[0]} = ${BLOCK_NODE_IP[0]} ]];then 
                 compute
                 compute_root_ssh_key 
-                compute block 
+                compute block
+            elif [[ $IF_ENABLE_NEUTRON_HA_DVR = yes ]];then
+                compute  compute-as-network-node
+                compute_root_ssh_key
             else
                 compute
                 compute_root_ssh_key
@@ -477,7 +497,11 @@ done
             if [[ ${#CONTROLLER_IP[*]} -eq 3 ]] && [[ ${#CONTROLLER_HOSTNAME[*]} -eq 3 ]];then
                 if [[ $(echo $CONTROLLER_VIP | awk -F "." '{print $1 $2 }') -eq $(echo ${CONTROLLER_IP[0]} | awk -F "." '{print $1 $2 }' ) ]];then
                     controller HA-ALL
-                    controller
+                    if [[ $IF_ENABLE_NEUTRON_HA_DVR = yes ]];then
+                        controller  controller-as-network-node
+                    else
+                        controller
+                    fi
                 else
                     debug "1" "The ${YELLOW}CONTROLLER_VIP${RED} must be a network segment with controller's ip"
                 fi
@@ -510,6 +534,9 @@ done
             elif [[ ${NETWORK_NODE_IP[0]} != ${COMPUTE_NODE_IP[0]} ]];then 
                 compute
                 compute_root_ssh_key
+            elif [[ $IF_ENABLE_NEUTRON_HA_DVR = yes  ]];then 
+                compute  compute-as-network-node
+                compute_root_ssh_key
             else
                 if [[ ${#COMPUTE_NODE_IP[*]} -eq 0 ]];then 
                     debug "warning" "There is no compute node can be deploy"
@@ -527,6 +554,14 @@ done
             ;;
         Check-nodes-system-info)
             check_info 
+            ;;
+        Clean-Env)
+            for ips in ${CONTROLLER_IP[*]}; do scp  deploy-openstack/bin/clean.sh $ips:/home/; 
+debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+
+            for ips in ${CONTROLLER_IP[*]}; do ssh -n $ips /bin/bash /home/clean.sh ;done
+
+            for ips in ${CONTROLLER_IP[*]}; do ssh -n $ips 'rm -rf /home/clean.sh';done 
             ;;
         SSH-key-nodes)
             ssh_key 

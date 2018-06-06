@@ -12,6 +12,9 @@ BLUE="$ESC[0;34m"
 WHITE="$ESC[0;37m"
 #PURPLE="$ESC[0;35m"
 CYAN="$ESC[0;36m"
+NTP_SERVER_IP=182.92.12.11
+
+
 
 function debug(){
 if [[ $1 -ne 0 ]]; then
@@ -20,7 +23,41 @@ if [[ $1 -ne 0 ]]; then
 fi
 }
 
+function ntp(){
+cat 2>&1 <<__EOF__
+$MAGENTA==========================================================
+            Begin to delpoy ntp
+==========================================================
+$NO_COLOR
+__EOF__
+echo $BLUE Installing ntp ... $NO_COLOR
+yum install ntp -y  1>/dev/null
+    debug "$?" "Install ntp failed, please check your yum repos"
+cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+hwclock --systohc
+sed -i "/server 0.centos.pool.ntp.org iburst/d" /etc/ntp.conf
+sed -i "/server 1.centos.pool.ntp.org iburst/d" /etc/ntp.conf
+sed -i "/server 2.centos.pool.ntp.org iburst/d" /etc/ntp.conf
+sed -i "/server 3.centos.pool.ntp.org iburst/d" /etc/ntp.conf
+sed -i "21 i server $NTP_SERVER_IP iburst " /etc/ntp.conf
+if [[ $(ps -ef | grep ntpd | grep -v grep | wc -l) -ge 1 ]];then
+    systemctl stop ntpd.service
+    ntpdate $NTP_SERVER_IP 1>/dev/null
+    if [[ $? -ne 0 ]];then
+        debug "warning" "The ntp sync time from ntp server failed"
+    fi
+else
+    ntpdate $NTP_SERVER_IP 1>/dev/null
+    if [[ $? -ne 0 ]];then
+        debug "warning" "The ntp sync time from ntp server failed"
+    fi
+fi
 
+systemctl enable ntpd.service 1>/dev/null 2>&1 &&
+echo $BLUE Starting the ntpd.service $NO_COLOR
+systemctl start ntpd.service
+    debug "$?" "start ntpd.service failed "
+}
 
 README=$(cat ./README.txt)
 OS=$(cat /etc/redhat-release | awk '{print $1}')
@@ -36,6 +73,9 @@ echo $CYAN =================================Usage as below:==================$NO
 echo $CYAN sh $0 begin $NO_COLOR
 }
 
+
+
+
 function install(){
 
 #-----------------------------yum repos configuration ---------------------------
@@ -49,8 +89,15 @@ yum clean all 1>/dev/null 2>1&
 echo $GREEN yum repos configuration done $NO_COLOR
 }
 
+#change the host name 
+echo "Zabbix-Server" >/etc/hostname
+hostname Zabbix-Server
+#set up the ntp to sync the time 
+ntp 
+
+
 #yum_repos
-#rpm -ivh http://repo.zabbix.com/zabbix/3.2/rhel/7/x86_64/zabbix-release-3.2-1.el7.noarch.rpm
+rpm -ivh http://repo.zabbix.com/zabbix/3.2/rhel/7/x86_64/zabbix-release-3.2-1.el7.noarch.rpm
 #echo $GREEN zabbix repos settting done $NO_COLOR
 #------------------execute the install script --------
 source ./bin/install.sh 

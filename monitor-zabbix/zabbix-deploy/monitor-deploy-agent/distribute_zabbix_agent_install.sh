@@ -48,26 +48,55 @@ debug(){
 
 function ssh_key(){
 echo $BLUE Generating public/private rsa key pair,skip all steps by type Enter: $NO_COLOR
-ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
+
+which sshpass 1>/dev/null 2>&1 || rpm -ivh ./install-zabbix-agent/packages/sshpass* 1>/dev/null 2>&1 
+echo -n $BLUE Please type the correct password for server:  $NO_COLOR
+read Password
+ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa 1>/dev/null
 if [[ $1 = "compute" ]];then
     echo $BLUE copy public key to compute hosts:  $NO_COLOR
-    for ips in $(cat ./HOSTs/compute);
-        do ssh-copy-id -i /root/.ssh/id_rsa.pub  $ips;
+    for ips in $(cat ./HOSTs/compute);do
+        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+            sed -i "/${ips}/d" ~/.ssh/known_hosts
+            ssh-keyscan $ips >> ~/.ssh/known_hosts 
+        else
+            ssh-keyscan $ips >> ~/.ssh/known_hosts
+        fi
+        sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
     done
 elif [[ $1 = "controller" ]];then
     echo $BLUE copy public key to controller hosts: $NO_COLOR
-    for ips in $(cat ./HOSTs/controller);
-        do ssh-copy-id -i /root/.ssh/id_rsa.pub  $ips;
-   done
+    for ips in $(cat ./HOSTs/compute);do
+        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+            sed -i "/${ips}/d" ~/.ssh/known_hosts
+            ssh-keyscan $ips >> ~/.ssh/known_hosts 
+        else
+            ssh-keyscan $ips >> ~/.ssh/known_hosts
+        fi
+        sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
+    done
+
 elif [[ $1 = "agent" ]];then
     echo $BLUE copy public key to network hosts:  $NO_COLOR
-    for ips in $(cat ./HOSTs/agent);
-        do ssh-copy-id -i /root/.ssh/id_rsa.pub  $ips;
+    for ips in $(cat ./HOSTs/compute);do
+        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+            sed -i "/${ips}/d" ~/.ssh/known_hosts
+            ssh-keyscan $ips >> ~/.ssh/known_hosts 
+        else
+            ssh-keyscan $ips >> ~/.ssh/known_hosts
+        fi
+        sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
     done
 elif [[ $1 = "storage" ]];then
     echo $BLUE copy public key to storage hosts:  $NO_COLOR
-    for ips in $(cat ./HOSTs/ceph);
-        do ssh-copy-id -i /root/.ssh/id_rsa.pub  $ips;
+    for ips in $(cat ./HOSTs/compute);do
+        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+            sed -i "/${ips}/d" ~/.ssh/known_hosts
+            ssh-keyscan $ips >> ~/.ssh/known_hosts 
+        else
+            ssh-keyscan $ips >> ~/.ssh/known_hosts
+        fi
+        sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
     done
 fi
 }

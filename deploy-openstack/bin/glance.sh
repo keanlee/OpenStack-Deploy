@@ -87,7 +87,7 @@ echo $BLUE Upload the image to the Image service using the QCOW2 disk format,\
 bare container format, and public visibility so all projects can access it $NO_COLOR
 sleep 5
 openstack image create "cirros" \
---file ${THE_VARIABLE_DIR}/lib/cirros-0.3.4-x86_64-disk.img \
+--file ${CONFIG_FILE_DIR}/lib/cirros-0.3.4-x86_64-disk.img \
 --disk-format qcow2 --container-format bare \
 --public
     debug "$?" "Upload image to glance failed"

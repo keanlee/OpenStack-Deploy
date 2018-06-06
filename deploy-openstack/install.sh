@@ -70,8 +70,13 @@ controller)
     source ${TOP_DIR}/bin/keystone.sh
     source ${TOP_DIR}/bin/glance.sh
     source ${TOP_DIR}/bin/nova.sh controller  
-    source ${TOP_DIR}/bin/neutron.sh controller 
-    source ${TOP_DIR}/bin/cinder.sh controller
+    source ${TOP_DIR}/bin/neutron.sh controller
+    if [[ $if_enable_cinder = yes ]];then  
+        source ${TOP_DIR}/bin/cinder.sh controller
+    fi
+    if [[ $if_enable_heat = yes ]];then 
+        source ${TOP_DIR}/bin/heat.sh controller
+    fi  
     source ${TOP_DIR}/bin/dashboard.sh
     source ${TOP_DIR}/bin/initial_network.sh
     ;;
@@ -95,7 +100,12 @@ controller-as-network-node)
     source ${TOP_DIR}/bin/glance.sh
     source ${TOP_DIR}/bin/nova.sh controller  
     source ${TOP_DIR}/bin/neutron.sh controller-as-network-node
-    source ${TOP_DIR}/bin/cinder.sh controller
+    if [[ $if_enable_cinder = yes ]];then
+        source ${TOP_DIR}/bin/cinder.sh controller
+    fi
+    if [[ $if_enable_heat = yes ]];then
+        source ${TOP_DIR}/bin/heat.sh controller
+    fi
     source ${TOP_DIR}/bin/dashboard.sh 
     source ${TOP_DIR}/bin/initial_network.sh
     ;;
