@@ -1,3 +1,20 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+__author__ = "keanlee"
+
+
+## ansi colors for formatting heredoc
+RED = '\033[31m'       
+GREEN = '\033[32m'     
+YELLOW = '\033[33m'    
+BLUE = '\033[34m'      
+FUCHSIA = '\033[35m'   # 紫红色
+CYAN = '\033[36m'      # 青蓝色
+WHITE = '\033[37m'     
+NO_COLOR = '\033[0m'
+
+
 def db_manage(sqlcommand):
     
     db = pymysql.connect("localhost","root","admin","db_ai")
