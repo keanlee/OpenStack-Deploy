@@ -80,3 +80,9 @@ def db_manage(sqlcommand):
             print(RED + "Insert data to db failed" + NO_COLOR)
         logwrite("Excute sql command: " + sqlcommand + "  failed") 
     db.close
+if __name__ == "__main__":
+    #how to call the db function
+    #sql = "INSERT INTO job SET project_id = " + "'" + projectName + "'" +",       job_id = " + "'" + jobId + "'" + ",create_date = NOW();"
+        ##job_status =  need update later
+        #Job_status = 'running'
+        #db_manage(sql)
