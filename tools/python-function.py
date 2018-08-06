@@ -5,6 +5,9 @@ __author__ = "keanlee"
 
 import sys,os
 import pymysql
+import logging 
+import datetime
+import time 
 
 ## ansi colors for formatting heredoc
 RED = '\033[31m'       
@@ -17,7 +20,37 @@ WHITE = '\033[37m'
 NO_COLOR = '\033[0m'
 
 
+#Define Log Writing Function
+def logwrite(logcontents,loglevel = "error"):
+    """
+    Get the error message and store in the log file 
 
+    """
+    logpath='/var/log/k8s-manager/'
+    global hostname
+    hostname = os.uname()[1]
+         
+    if not os.path.isdir(logpath):
+        os.makedirs(logpath)
+
+    logdata=datetime.datetime.now()
+    logtime=logdata.strftime('%Y-%m-%d %H:%M:%S')
+    daylogfile=logpath+'/'+'k8s-manager' + '.log'
+
+    logging.basicConfig(filename = daylogfile,level = logging.DEBUG)
+    if str(loglevel) == "info":
+        logging.info(" " + str(logtime) + "  " + hostname + "  " + os.path.basename(sys.argv[0]).split(".")[0] \
+             + ": " + str(logcontents))
+    elif str(loglevel) == "warning":
+        logging.warning(" " + str(logtime) + "  " + hostname + "  " + os.path.basename(sys.argv[0]).split(".")[0] \
+             + ": " + str(logcontents))
+    elif str(loglevel) == "notice":
+        logging.notice(" " + str(logtime) + "  " + hostname + "  " + os.path.basename(sys.argv[0]).split(".")[0] \
+             + ": " + str(logcontents))
+    else:
+        logging.error(" " + str(logtime)  + "  " + hostname + "  " + os.path.basename(sys.argv[0]).split(".")[0] \
+             + ": " + str(logcontents))
+        
 
 def db_manage(sqlcommand):
     
