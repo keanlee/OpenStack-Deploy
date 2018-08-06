@@ -3,6 +3,8 @@
 
 __author__ = "keanlee"
 
+import sys,os
+import pymysql
 
 ## ansi colors for formatting heredoc
 RED = '\033[31m'       
@@ -13,6 +15,8 @@ FUCHSIA = '\033[35m'   # 紫红色
 CYAN = '\033[36m'      # 青蓝色
 WHITE = '\033[37m'     
 NO_COLOR = '\033[0m'
+
+
 
 
 def db_manage(sqlcommand):
