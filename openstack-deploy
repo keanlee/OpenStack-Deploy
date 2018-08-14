@@ -201,7 +201,7 @@ if [[ ${#COMPUTE_NODE_IP[*]} -ge 1 ]];then
     done 
 fi
 
-if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]];then
+if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]] && [[ ${NETWORK_NODE_IP[0]} != ${CONTROLLER_IP[0]} ]];then
     echo $BLUE Copying public key to network hosts:  $NO_COLOR
     for ips in ${NETWORK_NODE_IP[*]};do
         if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
@@ -381,7 +381,7 @@ if [[ ${#COMPUTE_NODE_IP[*]} -ge 1 ]];then
 fi
 
 
-if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]];then 
+if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]] && [[ ${NETWORK_NODE_IP[0]} != ${CONTROLLER_IP[0]} ]];then 
     #for network nodes
     echo $MAGENTA  Check Network Node System Info: $NO_COLOR
     for ips in ${NETWORK_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
@@ -522,11 +522,11 @@ done
                 fi
             fi
  
-            if [[ ${#NETWORK_NODE_IP[*]} -eq 0 ]];then
-                debug "warning" "There is no network node can be deploy  "
-            else
-                network_node
-            fi           
+           # if [[ ${#NETWORK_NODE_IP[*]} -eq 0 ]];then
+           #     debug "warning" "There is no network node can be deploy  "
+           # else
+           #     network_node
+           # fi           
            
             if [[ ${#COMPUTE_NODE_IP[*]} -eq 1 ]] && [[ ${NETWORK_NODE_IP[0]} = ${COMPUTE_NODE_IP[0]} ]];then
                 compute  compute-as-network-node

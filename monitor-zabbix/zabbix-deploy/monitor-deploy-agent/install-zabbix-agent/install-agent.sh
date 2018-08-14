@@ -50,6 +50,14 @@ sed -i "s/Server=127.0.0.1/Server=$ZABBIXSERVER/g" /etc/zabbix/zabbix_agentd.con
 sed -i "s/ServerActive=127.0.0.1/ServerActive=$ZABBIXSERVER/g"  /etc/zabbix/zabbix_agentd.conf
 sed -i "s/Hostname=Zabbix\ server/Hostname=$HOSTNAME/g"  /etc/zabbix/zabbix_agentd.conf
 sed -i "167 i HostMetadata=$METADATA"  /etc/zabbix/zabbix_agentd.conf
+sed -i "/EnableRemoteCommands=0/aEnableRemoteCommands=1" /etc/zabbix/zabbix_agentd.conf
+sed -i "/LogRemoteCommands=0/aLogRemoteCommands=1" /etc/zabbix/zabbix_agentd.conf
+
+#sed -i "/Allow root to run any commands anywhere/azabbix ALL=NOPASSWD: /usr/bin/systemctl start vfio-bind" /etc/sudoers
+#sed -i "/Allow root to run any commands anywhere/a# allows 'zabbix' user to start vfio-bind without password" /etc/sudoers
+
+sed -i "/Allow root to run any commands anywhere/azabbix ALL=NOPASSWD: ALL" /etc/sudoers
+sed -i "/Allow root to run any commands anywhere/a# allows 'zabbix' user to run all commands without password" /etc/sudoers
 
 #--------------iptables setip------
 function firewall_setup(){
@@ -80,10 +88,10 @@ if [ $METADATA = controller ];then
     cp ./script/controller/check-dbsql.sh  /etc/zabbix/scripts
     sed -i '295 i UserParameter=check-process-status-openstack[*],/etc/zabbix/scripts/check-process-status-openstack.sh $1 ' /etc/zabbix/zabbix_agentd.conf
     sed -i '296 i UserParameter=system.cpu.highload[*], /etc/zabbix/scripts/thread.sh $1 '  /etc/zabbix/zabbix_agentd.conf
-    sed -i '297 i  UserParameter=system.cpu.top, /etc/zabbix/scripts/top.sh '  /etc/zabbix/zabbix_agentd.conf
-    sed -i '298 i  UserParameter=system.cpu.processexist[*], /etc/zabbix/scripts/processexist.sh $1 $2 $3 ' /etc/zabbix/zabbix_agentd.conf
-    sed -i '299 i  UserParameter=FromDual.MySQL.check,/usr/local/fpmmm/bin/fpmmm --config=/etc/fpmmm/fpmmm.conf ' /etc/zabbix/zabbix_agentd.conf
-    sed -i '300 i  UserParameter=check-dbsql,/etc/zabbix/scripts/check-dbsql.sh '  /etc/zabbix/zabbix_agentd.conf
+    sed -i '297 i UserParameter=system.cpu.top, /etc/zabbix/scripts/top.sh '  /etc/zabbix/zabbix_agentd.conf
+    sed -i '298 i UserParameter=system.cpu.processexist[*], /etc/zabbix/scripts/processexist.sh $1 $2 $3 ' /etc/zabbix/zabbix_agentd.conf
+    sed -i '299 i UserParameter=FromDual.MySQL.check,/usr/local/fpmmm/bin/fpmmm --config=/etc/fpmmm/fpmmm.conf ' /etc/zabbix/zabbix_agentd.conf
+    sed -i '300 i UserParameter=check-dbsql,/etc/zabbix/scripts/check-dbsql.sh '  /etc/zabbix/zabbix_agentd.conf
 else 
     continue 
 fi 

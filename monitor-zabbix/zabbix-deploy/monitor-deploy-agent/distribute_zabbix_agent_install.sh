@@ -87,9 +87,9 @@ elif [[ $1 = "agent" ]];then
         fi
         sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
     done
-elif [[ $1 = "storage" ]];then
+elif [[ $1 = "ceph" ]];then
     echo $BLUE copy public key to storage hosts:  $NO_COLOR
-    for ips in $(cat ./HOSTs/compute);do
+    for ips in $(cat ./HOSTs/ceph);do
         if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
             sed -i "/${ips}/d" ~/.ssh/known_hosts
             ssh-keyscan $ips >> ~/.ssh/known_hosts 
