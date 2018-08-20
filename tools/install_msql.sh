@@ -81,3 +81,4 @@ echo $GREEN Finished the Mariadb install and configuration on $YELLOW $(hostname
 }
 
 mysql_configuration
+mysql -uroot -padmin -e "GRANT ALL PRIVILEGES ON *.* TO root@"0.0.0.0" IDENTIFIED BY \"$MARIADB_PASSWORD\" WITH GRANT OPTION;FLUSH PRIVILEGES"
