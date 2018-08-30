@@ -61,6 +61,8 @@ yum install mariadb mariadb-server python2-PyMySQL mysql-devel -y 1>/dev/null
 systemctl enable mariadb.service 1>/dev/null 2>&1 && 
 systemctl start mariadb.service
 sed -i '/Group=mysql/a\LimitNOFILE=65535' /usr/lib/systemd/system/mariadb.service
+echo "collation-server = utf8mb4_general_ci" >> /etc/my.cnf
+echo "character-set-server = utf8mb4" >> /etc/my.cnf
 systemctl daemon-reload
 systemctl restart mariadb.service
 
