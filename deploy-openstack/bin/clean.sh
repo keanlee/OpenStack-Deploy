@@ -127,7 +127,3 @@ rm -rf ~/.ssh/id_rsa*
 #yum erase glusterfs-server  -y 1>/dev/null 
 
 
-
-
-
-

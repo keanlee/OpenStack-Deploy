@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License
 
-#Wirte by keanlee on May 19th 
+#Wirte by keanlee on May 19th of 2017 
 
 #------------------------------This script can help you depoly a lots of controller node and compute node 
 TOP_DIR=$(cd $(dirname $0); pwd)
