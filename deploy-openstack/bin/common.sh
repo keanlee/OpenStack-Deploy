@@ -55,11 +55,6 @@ function variable_set(){
     #The range is: 1-255 
     ROUTER_ID=123 
     PRIORITY_NUMS=(100 67 45)
-    #openstack componment here 
-    #default 
-    if_enable_cinder=no
-    if_enable_heat=yes
-    
     
     #--------------------Keystone ------------------
     #set keystone database password 

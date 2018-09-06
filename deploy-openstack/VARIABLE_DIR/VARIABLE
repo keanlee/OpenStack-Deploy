@@ -16,6 +16,12 @@ PRODUCT_NAME=OpenStack
 
 #--------------------the admin password for the dashboard 
 ADMIN_PASS=adminpass
+#openstack componment here
+#default
+#if deploy cinder 
+if_enable_cinder=no
+#if deploy heat 
+if_enable_heat=yes
 
 #--------------------controller node's ip list here -------------------
 #galera node's ip list here,for HA mode just support 3 nodes controller deploy 

@@ -46,215 +46,215 @@ Exit
 source  ${TOP_DIR}/deploy-openstack/bin/common.sh  
 
 function help(){
-which pv 1>/dev/null 2>&1 || rpm -ivh  ${THE_VARIABLE_DIR}/lib/pv* 1>/dev/null 2>&1
-echo -e $CYAN $(cat ${THE_VARIABLE_DIR}/README.txt) $NO_COLOR | pv -qL 30
-cat 1>&2 <<__EOF__
-$MAGENTA==================================================================================
-                 --------Usage as below ---------
-           ${MAGENTA}1. SSH-key-nodes
-              $BLUE#Generating a new SSH key and adding it to the target hosts $NO_COLOR
-           
-           ${MAGENTA}2. Check-nodes-system-info
-              $BLUE#To check all node system info CPU/Mem/NIC/Disk $NO_COLOR
-
-           ${MAGENTA}3. Deploy-controller-node 
-              $BLUE#To deploy controller/controller-as-network node$NO_COLOR 
-             
-           ${MAGENTA}4. Deploy-compute-node
-              $BLUE#To deploy compute/compute-as-network/compute-as-block node$NO_COLOR
-          
-           ${MAGENTA}5. Deploy-block-node
-              $BLUE#To deploy block node (Single with No HA)$NO_COLOR
-   
-           ${MAGENTA}6. Deploy-network-node
-              $BLUE#To deploy network node (Single with No HA) $NO_COLOR
-                     
-           ${MAGENTA}7. Deploy-galera-cluster
-              $BLUE#To deploy galera cluster（Separate with the controller） $NO_COLOR         
-           
-           ${MAGENTA}8. Deploy-all
-              $BLUE#To deploy controller node,network node,compute node,block node$NO_COLOR${MAGENTA}
-          
-          ${MAGENTA}9. Clean-Env
-              $BLUE#This option will uninstall all openstack pacakge and remove it's config file, only for testing  $NO_COLOR${MAGENTA}
-
-==================================================================================
-$NO_COLOR
+    which pv 1>/dev/null 2>&1 || rpm -ivh  ${THE_VARIABLE_DIR}/lib/pv* 1>/dev/null 2>&1
+    echo -e $CYAN $(cat ${THE_VARIABLE_DIR}/README.txt) $NO_COLOR | pv -qL 30
+    cat 1>&2 <<__EOF__
+    $MAGENTA==================================================================================
+                     --------Usage as below ---------
+               ${MAGENTA}1. SSH-key-nodes
+                  $BLUE#Generating a new SSH key and adding it to the target hosts $NO_COLOR
+               
+               ${MAGENTA}2. Check-nodes-system-info
+                  $BLUE#To check all node system info CPU/Mem/NIC/Disk $NO_COLOR
+    
+               ${MAGENTA}3. Deploy-controller-node 
+                  $BLUE#To deploy controller/controller-as-network node$NO_COLOR 
+                 
+               ${MAGENTA}4. Deploy-compute-node
+                  $BLUE#To deploy compute/compute-as-network/compute-as-block node$NO_COLOR
+              
+               ${MAGENTA}5. Deploy-block-node
+                  $BLUE#To deploy block node (Single with No HA)$NO_COLOR
+       
+               ${MAGENTA}6. Deploy-network-node
+                  $BLUE#To deploy network node (Single with No HA) $NO_COLOR
+                         
+               ${MAGENTA}7. Deploy-galera-cluster
+                  $BLUE#To deploy galera cluster（Separate with the controller） $NO_COLOR         
+               
+               ${MAGENTA}8. Deploy-all
+                  $BLUE#To deploy controller node,network node,compute node,block node$NO_COLOR${MAGENTA}
+              
+              ${MAGENTA}9. Clean-Env
+                  $BLUE#This option will uninstall all openstack pacakge and remove it's config file, only for testing  $NO_COLOR${MAGENTA}
+    
+    ==================================================================================
+    $NO_COLOR
 __EOF__
 }
 
 function ssh_key(){
-#make sure that all node can reachable from deploy host
-if [[ ${#CONTROLLER_IP[*]} -ne 0 ]];then 
-    echo $BLUE Checking the CONTROLLER-NODE\'s IPs $NO_COLOR
-    for ips in ${CONTROLLER_IP[*]};do
-        echo " ${ips}"
-        ping -c 1 ${ips} 1>/dev/null 2>&1
-            debug "$?" "The ${YELLOW}$ips${RED} which belongs to CONTROLLER_IP is unreachable from Deploy Host"       
-    done 
-else 
-    continue 
-fi
-
-if [[ ${#COMPUTE_NODE_IP[*]} -ne 0 ]];then
-    echo $BLUE Checking the COMPUTE-NODE\'s IPs $NO_COLOR
-    for ips in ${COMPUTE_NODE_IP[*]};do
-        echo " ${ips}"
-        ping -c 1 ${ips} 1>/dev/null 2>&1
-            debug "$?" "The ${YELLOW}$ips${RED} which belongs to COMPUTE_NODE_IP is unreachable from Deploy Host"  
-    done
-else 
-    continue 
-fi 
-
-if [[ ${#NETWORK_NODE_IP[*]} -ne 0 ]];then
-    echo $BLUE Checking the NETWORK-NODE\'s IPs $NO_COLOR
-    for ips in ${NETWORK_NODE_IP[*]};do
-        echo " ${ips}"
-        ping -c 1 ${ips} 1>/dev/null 2>&1
-            debug "$?" "The ${YELLOW}$ips${RED} which belongs to NETWORK_NODE_IP is unreachable from Deploy Host"
-    done
-else 
-    continue 
-fi 
-
-if [[ ${#BLOCK_NODE_IP[*]} -ne 0 ]];then 
-    echo $BLUE Checking the BLOCK-NODE\'s IPs $NO_COLOR
-    for ips in ${BLOCK_NODE_IP[*]};do
-        echo " ${ips}"
-        ping -c 1 ${ips} 1>/dev/null 2>&1
-            debug "$?" "The ${YELLOW}$ips${RED} which belongs to BLOCK_NODE_IP is unreachable from Deploy Host"
-    done
-else 
-    continue 
-fi 
-
-#do ssh-key to nodes
-if [[ -e ~/.ssh/id_rsa.pub ]];then 
-    rm -rf ~/.ssh/id_rsa*
-    #continue
-fi
-echo $BLUE Generating public/private rsa key pair $NO_COLOR
-ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa 1>/dev/null
-#-N "" tells it to use an empty passphrase (the same as two of the enters in an interactive script)
-#-f my.key tells it to store the key into my.key (change as you see fit).
-which sshpass 1>/dev/null 2>&1 || rpm -ivh ./deploy-openstack/lib/sshpass* 1>/dev/null 2>&1   
-
-echo -n $BLUE Please type the correct password for server:  $NO_COLOR
-read Password
-
-if [[ -e  ~/.ssh/known_hosts ]];then
-    continue
-else
-    touch ~/.ssh/known_hosts
-fi
-
-if [[ ${#CONTROLLER_IP[*]} -ge 1 ]];then
-    echo $BLUE Copying public key to controller hosts: $NO_COLOR
-    for ips in ${CONTROLLER_IP[*]};do
-        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
-            sed -i "/${ips}/d" ~/.ssh/known_hosts
-            ssh-keyscan $ips >> ~/.ssh/known_hosts 
-        else
-            ssh-keyscan $ips >> ~/.ssh/known_hosts
-        fi
-    done
-    for ips in ${CONTROLLER_IP[*]};
-        do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
-        suffix=$(( $suffix + 1 ))
-        suffix0=$(( $suffix0 + 1 ))
-        local number1=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
-        if [[ ${number1} -eq 0 ]];then
-            ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-Controller-${suffix0} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-Controller-${suffix0}"
-        fi    
-    done
-    if [[ ${#CONTROLLER_IP[*]} -eq 3 ]];then
-        if [[ $(cat ${THE_VARIABLE_DIR}/VARIABLE | grep CONTROLLER_HOSTNAME | wc -l) != 0  ]];then 
-            sed -i '/^CONTROLLER_HOSTNAME*/d' ${THE_VARIABLE_DIR}/VARIABLE
-        fi
-        controller1_hostname=$(ssh -n root@${CONTROLLER_IP[0]}  "hostname")
-        controller2_hostname=$(ssh -n root@${CONTROLLER_IP[1]}  "hostname")
-        controller3_hostname=$(ssh -n root@${CONTROLLER_IP[2]}  "hostname")
-        sed -i "/CONTROLLER-HOSTNAME-HERE/a\CONTROLLER_HOSTNAME=(${controller1_hostname} ${controller2_hostname}  ${controller3_hostname} )" ${THE_VARIABLE_DIR}/VARIABLE
-    else
-        continue
+    #make sure that all node can reachable from deploy host
+    if [[ ${#CONTROLLER_IP[*]} -ne 0 ]];then 
+        echo $BLUE Checking the CONTROLLER-NODE\'s IPs $NO_COLOR
+        for ips in ${CONTROLLER_IP[*]};do
+            echo " ${ips}"
+            ping -c 1 ${ips} 1>/dev/null 2>&1
+                debug "$?" "The ${YELLOW}$ips${RED} which belongs to CONTROLLER_IP is unreachable from Deploy Host"       
+        done 
+    else 
+        continue 
     fi
-fi
-if [[ ${#COMPUTE_NODE_IP[*]} -ge 1 ]];then 
-    echo $BLUE Copying public key to compute hosts:  $NO_COLOR
-    for ips in ${COMPUTE_NODE_IP[*]};do
-        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then 
-            sed -i "/${ips}/d" ~/.ssh/known_hosts
-            ssh-keyscan $ips >> ~/.ssh/known_hosts 
-        else 
-            ssh-keyscan $ips >> ~/.ssh/known_hosts
-        fi
-    done 
-    for ips in ${COMPUTE_NODE_IP[*]};
-        do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
-        suffix=$(( $suffix + 1 ))
-        suffix1=$(( $suffix1 + 1 ))
-        local number2=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
-        if [[ ${number2} -eq 0 ]];then
-            ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-Compute-${suffix1} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-Compute-${suffix1}"
-        fi
-    done 
-fi
-
-if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]] && [[ ${NETWORK_NODE_IP[0]} != ${CONTROLLER_IP[0]} ]];then
-    echo $BLUE Copying public key to network hosts:  $NO_COLOR
-    for ips in ${NETWORK_NODE_IP[*]};do
-        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
-            sed -i "/${ips}/d" ~/.ssh/known_hosts
-            ssh-keyscan $ips >> ~/.ssh/known_hosts 
+    
+    if [[ ${#COMPUTE_NODE_IP[*]} -ne 0 ]];then
+        echo $BLUE Checking the COMPUTE-NODE\'s IPs $NO_COLOR
+        for ips in ${COMPUTE_NODE_IP[*]};do
+            echo " ${ips}"
+            ping -c 1 ${ips} 1>/dev/null 2>&1
+                debug "$?" "The ${YELLOW}$ips${RED} which belongs to COMPUTE_NODE_IP is unreachable from Deploy Host"  
+        done
+    else 
+        continue 
+    fi 
+    
+    if [[ ${#NETWORK_NODE_IP[*]} -ne 0 ]];then
+        echo $BLUE Checking the NETWORK-NODE\'s IPs $NO_COLOR
+        for ips in ${NETWORK_NODE_IP[*]};do
+            echo " ${ips}"
+            ping -c 1 ${ips} 1>/dev/null 2>&1
+                debug "$?" "The ${YELLOW}$ips${RED} which belongs to NETWORK_NODE_IP is unreachable from Deploy Host"
+        done
+    else 
+        continue 
+    fi 
+    
+    if [[ ${#BLOCK_NODE_IP[*]} -ne 0 ]];then 
+        echo $BLUE Checking the BLOCK-NODE\'s IPs $NO_COLOR
+        for ips in ${BLOCK_NODE_IP[*]};do
+            echo " ${ips}"
+            ping -c 1 ${ips} 1>/dev/null 2>&1
+                debug "$?" "The ${YELLOW}$ips${RED} which belongs to BLOCK_NODE_IP is unreachable from Deploy Host"
+        done
+    else 
+        continue 
+    fi 
+    
+    #do ssh-key to nodes
+    if [[ -e ~/.ssh/id_rsa.pub ]];then 
+        rm -rf ~/.ssh/id_rsa*
+        #continue
+    fi
+    echo $BLUE Generating public/private rsa key pair $NO_COLOR
+    ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa 1>/dev/null
+    #-N "" tells it to use an empty passphrase (the same as two of the enters in an interactive script)
+    #-f my.key tells it to store the key into my.key (change as you see fit).
+    which sshpass 1>/dev/null 2>&1 || rpm -ivh ./deploy-openstack/lib/sshpass* 1>/dev/null 2>&1   
+    
+    echo -n $BLUE Please type the correct password for server:  $NO_COLOR
+    read Password
+    
+    if [[ -e  ~/.ssh/known_hosts ]];then
+        continue
+    else
+        touch ~/.ssh/known_hosts
+    fi
+    
+    if [[ ${#CONTROLLER_IP[*]} -ge 1 ]];then
+        echo $BLUE Copying public key to controller hosts: $NO_COLOR
+        for ips in ${CONTROLLER_IP[*]};do
+            if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+                sed -i "/${ips}/d" ~/.ssh/known_hosts
+                ssh-keyscan $ips >> ~/.ssh/known_hosts 
+            else
+                ssh-keyscan $ips >> ~/.ssh/known_hosts
+            fi
+        done
+        for ips in ${CONTROLLER_IP[*]};
+            do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
+            suffix=$(( $suffix + 1 ))
+            suffix0=$(( $suffix0 + 1 ))
+            local number1=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
+            if [[ ${number1} -eq 0 ]];then
+                ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-Controller-${suffix0} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-Controller-${suffix0}"
+            fi    
+        done
+        if [[ ${#CONTROLLER_IP[*]} -eq 3 ]];then
+            if [[ $(cat ${THE_VARIABLE_DIR}/VARIABLE | grep CONTROLLER_HOSTNAME | wc -l) != 0  ]];then 
+                sed -i '/^CONTROLLER_HOSTNAME*/d' ${THE_VARIABLE_DIR}/VARIABLE
+            fi
+            controller1_hostname=$(ssh -n root@${CONTROLLER_IP[0]}  "hostname")
+            controller2_hostname=$(ssh -n root@${CONTROLLER_IP[1]}  "hostname")
+            controller3_hostname=$(ssh -n root@${CONTROLLER_IP[2]}  "hostname")
+            sed -i "/CONTROLLER-HOSTNAME-HERE/a\CONTROLLER_HOSTNAME=(${controller1_hostname} ${controller2_hostname}  ${controller3_hostname} )" ${THE_VARIABLE_DIR}/VARIABLE
         else
-            ssh-keyscan $ips >> ~/.ssh/known_hosts
+            continue
         fi
-    done 
-    for ips in ${NETWORK_NODE_IP[*]};
-        do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
-        suffix=$(( $suffix + 1 ))
-        suffix2=$(( $suffix2 + 1 ))
-        local number3=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
-        if [[ ${number3} -eq 0 ]];then
-            ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-Network-${suffix2} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-Network-${suffix2}"
-        fi
-    done
-fi
-
-if [[ ${#BLOCK_NODE_IP[*]} -ge 1 ]];then
-    echo $BLUE Copying public key to storage hosts:  $NO_COLOR
-    for ips in ${BLOCK_NODE_IP[*]};do
-        if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
-            sed -i "/${ips}/d" ~/.ssh/known_hosts
-            ssh-keyscan $ips >> ~/.ssh/known_hosts
-        else
-            ssh-keyscan $ips >> ~/.ssh/known_hosts 
-        fi
-    done 
-    for ips in ${BLOCK_NODE_IP[*]};
-        do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
-        suffix=$(( $suffix + 1 ))
-        suffix3=$(( $suffix3 + 1 ))
-        local number4=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
-        if [[ ${number4} -eq 0 ]];then
-            ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-BLOCK-${suffix3} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-BLOCK-${suffix3}"
-        fi
-    done
-fi
+    fi
+    if [[ ${#COMPUTE_NODE_IP[*]} -ge 1 ]];then 
+        echo $BLUE Copying public key to compute hosts:  $NO_COLOR
+        for ips in ${COMPUTE_NODE_IP[*]};do
+            if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then 
+                sed -i "/${ips}/d" ~/.ssh/known_hosts
+                ssh-keyscan $ips >> ~/.ssh/known_hosts 
+            else 
+                ssh-keyscan $ips >> ~/.ssh/known_hosts
+            fi
+        done 
+        for ips in ${COMPUTE_NODE_IP[*]};
+            do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
+            suffix=$(( $suffix + 1 ))
+            suffix1=$(( $suffix1 + 1 ))
+            local number2=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
+            if [[ ${number2} -eq 0 ]];then
+                ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-Compute-${suffix1} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-Compute-${suffix1}"
+            fi
+        done 
+    fi
+    
+    if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]] && [[ ${NETWORK_NODE_IP[0]} != ${CONTROLLER_IP[0]} ]];then
+        echo $BLUE Copying public key to network hosts:  $NO_COLOR
+        for ips in ${NETWORK_NODE_IP[*]};do
+            if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+                sed -i "/${ips}/d" ~/.ssh/known_hosts
+                ssh-keyscan $ips >> ~/.ssh/known_hosts 
+            else
+                ssh-keyscan $ips >> ~/.ssh/known_hosts
+            fi
+        done 
+        for ips in ${NETWORK_NODE_IP[*]};
+            do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
+            suffix=$(( $suffix + 1 ))
+            suffix2=$(( $suffix2 + 1 ))
+            local number3=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
+            if [[ ${number3} -eq 0 ]];then
+                ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-Network-${suffix2} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-Network-${suffix2}"
+            fi
+        done
+    fi
+    
+    if [[ ${#BLOCK_NODE_IP[*]} -ge 1 ]];then
+        echo $BLUE Copying public key to storage hosts:  $NO_COLOR
+        for ips in ${BLOCK_NODE_IP[*]};do
+            if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
+                sed -i "/${ips}/d" ~/.ssh/known_hosts
+                ssh-keyscan $ips >> ~/.ssh/known_hosts
+            else
+                ssh-keyscan $ips >> ~/.ssh/known_hosts 
+            fi
+        done 
+        for ips in ${BLOCK_NODE_IP[*]};
+            do sshpass -p $Password ssh-copy-id -i ~/.ssh/id_rsa.pub root@$ips;
+            suffix=$(( $suffix + 1 ))
+            suffix3=$(( $suffix3 + 1 ))
+            local number4=$(ssh -n root@${ips} "hostname | grep ${PRODUCT_NAME} | wc -l ")
+            if [[ ${number4} -eq 0 ]];then
+                ssh -n root@${ips} "echo ${PRODUCT_NAME}-Node${suffix}-BLOCK-${suffix3} >/etc/hostname;hostname ${PRODUCT_NAME}-Node${suffix}-BLOCK-${suffix3}"
+            fi
+        done
+    fi
 }
 
 function compute_root_ssh_key(){
-if [[ ${ROOT_SSH_COMPUTE} = "no" ]];then
-    for ips in ${COMPUTE_NODE_IP[*]};do
-        ssh -n root@${ips} "rm -rf ~/.ssh/authorized_keys"
-    done
-    debug "notice" "You have disabled the ssh key for \"root\" on all compute node"
-elif [[ ${ROOT_SSH_COMPUTE} = "yes" ]];then
-    debug "notice" "You have enabled the ssh key for \"root\" on all compute node"
-else
-    debug "warning" "Unknow value for Funcation :ROOT_SSH_COMPUTE !!!"
-fi
+    if [[ ${ROOT_SSH_COMPUTE} = "no" ]];then
+        for ips in ${COMPUTE_NODE_IP[*]};do
+            ssh -n root@${ips} "rm -rf ~/.ssh/authorized_keys"
+        done
+        debug "notice" "You have disabled the ssh key for \"root\" on all compute node"
+    elif [[ ${ROOT_SSH_COMPUTE} = "yes" ]];then
+        debug "notice" "You have enabled the ssh key for \"root\" on all compute node"
+    else
+        debug "warning" "Unknow value for Funcation :ROOT_SSH_COMPUTE !!!"
+    fi
 
 }
 
@@ -265,79 +265,79 @@ fi
 #                                  
 #----------------------------------controller node deploy ---------------------
 function controller(){
-#deploy controller node and galera node 
-if [[ $# -eq 0 ]];then
-    local SCRIPT=install.sh
-    local VALUE=controller
-elif [[ $1 = "controller-as-network-node" ]];then 
-    local SCRIPT=install.sh
-    local VALUE=controller-as-network-node
-elif [[ $1 = "HA-ALL" ]];then 
-    local SCRIPT=bin/ha_proxy.sh 
-    local VALUE=HA_ALL
-elif [[ $1 = "galera" ]];then
-    local SCRIPT=bin/ha_proxy.sh 
-    local VALUE=galera
-else 
-    debug "1" "function:controller cannot support your parameter "
-fi 
-
-for ips in ${CONTROLLER_IP[*]}; do scp -r deploy-openstack/ \
-$ips:/home/; \
-    debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
-
-for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/${SCRIPT} \
-${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
-    debug "$?" "bash remote execute on remote host <$ips> error "; done
-
-for ips in ${CONTROLLER_IP[*]}; do ssh -n $ips 'rm -rf /home/deploy-openstack/';done
+    #deploy controller node and galera node 
+    if [[ $# -eq 0 ]];then
+        local SCRIPT=install.sh
+        local VALUE=controller
+    elif [[ $1 = "controller-as-network-node" ]];then 
+        local SCRIPT=install.sh
+        local VALUE=controller-as-network-node
+    elif [[ $1 = "HA-ALL" ]];then 
+        local SCRIPT=bin/ha_proxy.sh 
+        local VALUE=HA_ALL
+    elif [[ $1 = "galera" ]];then
+        local SCRIPT=bin/ha_proxy.sh 
+        local VALUE=galera
+    else 
+        debug "1" "function:controller cannot support your parameter "
+    fi 
+    
+    for ips in ${CONTROLLER_IP[*]}; do scp -r deploy-openstack/ \
+    $ips:/home/; \
+        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+    
+    for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/${SCRIPT} \
+    ${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
+        debug "$?" "bash remote execute on remote host <$ips> error "; done
+    
+    for ips in ${CONTROLLER_IP[*]}; do ssh -n $ips 'rm -rf /home/deploy-openstack/';done
 }
 
 
 
 #---------------------------------compute node deploy -----------------
 function compute(){
-#Deploy the compute node and block node
-if [[ $# -eq 0 ]];then
-    local VALUE=compute
-elif [[ $1 = "compute-as-network-node" ]];then 
-    local VALUE=compute-as-network-node
-elif [[ $1 = "block" ]];then
-    local VALUE=deploy-block-node
-else 
-    debug "1" "function cannot support your parameter "
-fi 
-
-if [[ $1 = "block" ]];then
-    for ips in ${BLOCK_NODE_IP[*]}; do scp -r deploy-openstack/ $ips:/home/; \
-        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1 
-
-    for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
-${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
-        debug "$?" "bash remote execute on remote host <$ips> error "; done
-
-    for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done
-else
-    for ips in ${COMPUTE_NODE_IP[*]}; do scp -r deploy-openstack/ $ips:/home/; \
-        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1 
-    for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
-${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
-        debug "$?" "bash remote execute on remote host <$ips> error "; done
-
-    for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done
-fi
+    #Deploy the compute node and block node
+    if [[ $# -eq 0 ]];then
+        local VALUE=compute
+    elif [[ $1 = "compute-as-network-node" ]];then 
+        local VALUE=compute-as-network-node
+    elif [[ $1 = "block" ]];then
+        local VALUE=deploy-block-node
+    else 
+        debug "1" "function cannot support your parameter "
+    fi 
+    
+    if [[ $1 = "block" ]];then
+        for ips in ${BLOCK_NODE_IP[*]}; do scp -r deploy-openstack/ $ips:/home/; \
+            debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1 
+    
+        for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
+    ${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
+            debug "$?" "bash remote execute on remote host <$ips> error "; done
+    
+        for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done
+    else
+        for ips in ${COMPUTE_NODE_IP[*]}; do scp -r deploy-openstack/ $ips:/home/; \
+            debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1 
+        for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
+    ${VALUE} | tee ${TOP_DIR}/logs/${VALUE}-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log ; \
+            debug "$?" "bash remote execute on remote host <$ips> error "; done
+    
+        for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done
+    fi
 }
 
 #----------------------------------network node deploy-----------------------
 function network_node(){
-#Only deploy the network node 
-for ips in ${NETWORK_NODE_IP[*]} ; do scp -r deploy-openstack/ $ips:/home/; \
-    debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
-
-for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
-network | tee ${TOP_DIR}/logs/network-node-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log;done 
-
-for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done 
+    #Only deploy the network node 
+    for ips in ${NETWORK_NODE_IP[*]} ; do scp -r deploy-openstack/ $ips:/home/; \
+        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+    
+    for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/deploy-openstack/install.sh \
+    network | tee ${TOP_DIR}/logs/network-node-$ips-$(date "+%Y-%m-%d--%H:%M")-debug.log;done 
+    
+    for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-openstack/';done 
 }
 
 #
@@ -346,62 +346,62 @@ for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/deploy-opens
 #
 #-----------------------------show target host system info-------------------------------------
 function check_info(){
-#check the target host system infor
-#for controller nodes
-if [[ ${#CONTROLLER_IP[*]} -ge 1 ]];then 
+    #check the target host system infor
     #for controller nodes
-    echo $MAGENTA  Check Controller/Galera Node System Info: $NO_COLOR
-    for ips in ${CONTROLLER_IP[*]}; do scp ./deploy-openstack/bin/system_info.sh root@$ips:/home/; \
-        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
-    for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
-        debug "$?" "bash remote execute on remote host <$ips> error "; done
-    for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
-    if [[ ${#CONTROLLER_IP[*]} -eq 3 ]];then 
-        if [[ $(cat ${THE_VARIABLE_DIR}/VARIABLE | grep CONTROLLER_HOSTNAME | wc -l) != 0  ]];then 
-            sed -i '/^CONTROLLER_HOSTNAME*/d' ${THE_VARIABLE_DIR}/VARIABLE
-        fi
-        controller1_hostname=$(ssh -n root@${CONTROLLER_IP[0]}  "hostname")
-        controller2_hostname=$(ssh -n root@${CONTROLLER_IP[1]}  "hostname")
-        controller3_hostname=$(ssh -n root@${CONTROLLER_IP[2]}  "hostname")
-        sed -i "/CONTROLLER-HOSTNAME-HERE/a\CONTROLLER_HOSTNAME=(${controller1_hostname} ${controller2_hostname}  ${controller3_hostname} )" ${THE_VARIABLE_DIR}/VARIABLE
-    else 
-        continue 
-    fi 
-fi
-
-if [[ ${#COMPUTE_NODE_IP[*]} -ge 1 ]];then 
-    #for compute nodes
-    echo $MAGENTA  Check Compute Node System Info: $NO_COLOR
-    for ips in ${COMPUTE_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
-        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
-    for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
-        debug "$?" "bash remote execute on remote host <$ips> error "; done
- 
-    for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
-fi
-
-
-if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]] && [[ ${NETWORK_NODE_IP[0]} != ${CONTROLLER_IP[0]} ]];then 
-    #for network nodes
-    echo $MAGENTA  Check Network Node System Info: $NO_COLOR
-    for ips in ${NETWORK_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
-        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
-    for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
-        debug "$?" "bash remote execute on remote host <$ips> error "; done
-
-    for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
-fi
-
-if [[ ${#BLOCK_NODE_IP[*]} -ge 1 ]];then
-    #for block nodes
-    echo $MAGENTA  Check Block Node System Info: $NO_COLOR
-    for ips in ${BLOCK_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
-        debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
-    for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
-        debug "$?" "bash remote execute on remote host <$ips> error "; done
-
-    for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
-fi
+    if [[ ${#CONTROLLER_IP[*]} -ge 1 ]];then 
+        #for controller nodes
+        echo $MAGENTA  Check Controller/Galera Node System Info: $NO_COLOR
+        for ips in ${CONTROLLER_IP[*]}; do scp ./deploy-openstack/bin/system_info.sh root@$ips:/home/; \
+            debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+        for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
+            debug "$?" "bash remote execute on remote host <$ips> error "; done
+        for ips in ${CONTROLLER_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
+        if [[ ${#CONTROLLER_IP[*]} -eq 3 ]];then 
+            if [[ $(cat ${THE_VARIABLE_DIR}/VARIABLE | grep CONTROLLER_HOSTNAME | wc -l) != 0  ]];then 
+                sed -i '/^CONTROLLER_HOSTNAME*/d' ${THE_VARIABLE_DIR}/VARIABLE
+            fi
+            controller1_hostname=$(ssh -n root@${CONTROLLER_IP[0]}  "hostname")
+            controller2_hostname=$(ssh -n root@${CONTROLLER_IP[1]}  "hostname")
+            controller3_hostname=$(ssh -n root@${CONTROLLER_IP[2]}  "hostname")
+            sed -i "/CONTROLLER-HOSTNAME-HERE/a\CONTROLLER_HOSTNAME=(${controller1_hostname} ${controller2_hostname}  ${controller3_hostname} )" ${THE_VARIABLE_DIR}/VARIABLE
+        else 
+            continue 
+        fi 
+    fi
+    
+    if [[ ${#COMPUTE_NODE_IP[*]} -ge 1 ]];then 
+        #for compute nodes
+        echo $MAGENTA  Check Compute Node System Info: $NO_COLOR
+        for ips in ${COMPUTE_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
+            debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+        for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
+            debug "$?" "bash remote execute on remote host <$ips> error "; done
+     
+        for ips in ${COMPUTE_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
+    fi
+    
+    
+    if [[ ${#NETWORK_NODE_IP[*]} -ge 1 ]] && [[ ${NETWORK_NODE_IP[0]} != ${CONTROLLER_IP[0]} ]];then 
+        #for network nodes
+        echo $MAGENTA  Check Network Node System Info: $NO_COLOR
+        for ips in ${NETWORK_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
+            debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+        for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
+            debug "$?" "bash remote execute on remote host <$ips> error "; done
+    
+        for ips in ${NETWORK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
+    fi
+    
+    if [[ ${#BLOCK_NODE_IP[*]} -ge 1 ]];then
+        #for block nodes
+        echo $MAGENTA  Check Block Node System Info: $NO_COLOR
+        for ips in ${BLOCK_NODE_IP[*]}; do scp ${TOP_DIR}/deploy-openstack/bin/system_info.sh root@$ips:/home/; \
+            debug "$?" "Failed scp deploy script to $ips host" ; done 1>/dev/null 2>&1
+        for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips /bin/bash /home/system_info.sh; \
+            debug "$?" "bash remote execute on remote host <$ips> error "; done
+    
+        for ips in ${BLOCK_NODE_IP[*]}; do ssh -n root@$ips 'rm -rf /home/system_info.sh';done
+    fi
 }
 
 #
