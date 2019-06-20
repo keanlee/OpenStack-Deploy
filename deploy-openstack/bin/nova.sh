@@ -34,8 +34,8 @@ __EOF__
     yum install openstack-nova-api openstack-nova-conductor \
         openstack-nova-console openstack-nova-novncproxy \
             openstack-nova-scheduler  -y 1>/dev/null 
-        debug "$?" "Install openstack-nova-api openstack-nova-conductor openstack-nova-console\
-            openstack-nova-novncproxy openstack-nova-scheduler failed "
+        debug_info "Install openstack-nova-api openstack-nova-conductor openstack-nova-console\
+            openstack-nova-novncproxy openstack-nova-scheduler "
     
     # Copy nova.conf and edit it ... 
     cp -f ${CONFIG_FILE_DIR}/etc/controller/nova.conf  /etc/nova/ 
@@ -59,7 +59,7 @@ __EOF__
 
         echo $BLUE Populating the Nova databases $NO_COLOR
         su -s /bin/sh -c "nova-manage db sync" nova  1>/dev/null 2>&1
-            debug "$?"  "nova-manage db sync failed "
+            debug_info "nova-manage db sync "
         get_database_size nova $NOVA_DBPASS
         #echo $GREEN Populate nova database success , ignore any deprecation messages in  above output $NO_COLOR
     fi
@@ -67,13 +67,13 @@ __EOF__
     systemctl enable openstack-nova-api.service \
         openstack-nova-consoleauth.service openstack-nova-scheduler.service openstack-nova-conductor.service \
             openstack-nova-novncproxy.service 1>/dev/null 2>&1 
-        debug "$?" "systemctl enable nova service failed  "
+        debug_info "systemctl enable nova service "
     
     echo $BLUE Starting the openstack nova service on $(hostname) node  $NO_COLOR 
     systemctl start openstack-nova-api.service \
         openstack-nova-consoleauth.service openstack-nova-scheduler.service \
             openstack-nova-conductor.service openstack-nova-novncproxy.service
-        debug "$?" "Start the nova service failed on $(hostname)"
+        debug_info "Start the nova service on $(hostname)"
     
     cat 2>&1 <<__EOF__
     $GREEN=====================================================================
@@ -95,7 +95,7 @@ function nova_compute(){
 __EOF__
     echo $BLUE Installing openstack-nova-compute ... $NO_COLOR 
     yum install openstack-nova-compute -y 1>/dev/null 
-        debug "$?" "Install openstack-nova-compute failed " 
+        debug_info "Install openstack-nova-compute "
     # Copy nova.conf and edit it ...  
     cp -f ${CONFIG_FILE_DIR}/etc/compute/nova.conf  /etc/nova
     sed -i "s/COMPUTE_MANAGEMENT_INTERFACE_IP_ADDRESS/$COMPUTE_MANAGEMENT_INTERFACE_IP_ADDRESS/g" /etc/nova/nova.conf
@@ -130,7 +130,7 @@ __EOF__
     echo $BLUE Starting libvirtd.service openstack-nova-compute.service ...$NO_COLOR
     systemctl enable libvirtd.service openstack-nova-compute.service  1>/dev/null 2>&1
     systemctl start libvirtd.service openstack-nova-compute.service  
-        debug "$?" "Starting libvirtd or openstack-nova-compute failed "
+        debug_info "Start libvirtd or openstack-nova-compute "
     
     
     if [[ ${NOVA_STOREAGE_HA} = "ceph" ]];then 

@@ -14,6 +14,9 @@
 #The  hostname will be show as product_name-nodeX-controller/compute/network/block,such as OpenStack-node1-controller1
 PRODUCT_NAME=OpenStack
 
+###like base update extras repo if or not use the default by os
+OS_REPO_USE_DEFAULT=true
+
 #--------------------the admin password for the dashboard 
 ADMIN_PASS=adminpass
 #openstack componment here

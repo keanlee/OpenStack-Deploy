@@ -54,6 +54,7 @@ function glance_main(){
     else
         echo $BLUE Populating the Image service database $NO_COLOR
         su -s /bin/sh -c "glance-manage db_sync" glance  1>/dev/null 2>&1
+            debug_info "su -s /bin/sh -c \"glance-manage db_sync\" glance"
         get_database_size glance $GLANCE_DBPASS
             debug "$?" "Populate the Image service database Failed,\
                 execute su -s /bin/sh -c \"glance-manage db_sync\" glance or check glance.api log "
@@ -109,7 +110,7 @@ __EOF__
         --file ${CONFIG_FILE_DIR}/lib/cirros-0.3.4-x86_64-disk.img \
             --disk-format qcow2 --container-format bare \
                 --public
-        debug "$?" "Upload image to glance failed"
+        debug_info "Upload image to glance "
     
     if [[  $(openstack image list | grep cirros | wc -l) -ge 1 ]];then
         echo $GREEN Upload image cirros Success $NO_COLOR

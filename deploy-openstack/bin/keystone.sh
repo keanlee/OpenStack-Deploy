@@ -104,8 +104,10 @@ function keystone_main(){
     
     #Edit keystone configuration file 
     cp -f ${CONFIG_FILE_DIR}/etc/controller/keystone.conf   /etc/keystone/
+        debug_info "copy keystone.conf to /etc/keystone"
     sed -i "s/controller_vip/${MGMT_IP}/g"  /etc/keystone/keystone.conf
     sed -i "s/KEYSTONE_DBPASS/$KEYSTONE_DBPASS/g" /etc/keystone/keystone.conf
+        debug_info "change keystone.conf "
     
     if [[ ${#CONTROLLER_IP[*]} -ge 3 ]];then
         echo $BLUE Checking the VIP if working: $NO_COLOR
@@ -128,27 +130,31 @@ function keystone_main(){
     else
         echo $BLUE Populating the Identity service database ... $NO_COLOR
         su -s /bin/sh -c "keystone-manage db_sync" keystone
+            debug_info "su -s /bin/sh -c \"keystone-manage db_sync\" keystone"
         get_database_size keystone ${KEYSTONE_DBPASS}
     
         echo $BLUE Initialize Fernet key repositories ... $NO_COLOR
         keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
+            debug_info "keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone"
         keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
-    
+            debug_info "keystone-manage credential_setup --keystone-user keystone --keystone-group keystone"
+
         echo $BLUE Bootstrap the Identity service ... $NO_COLOR
         keystone-manage bootstrap --bootstrap-password ${ADMIN_PASS} \
             --bootstrap-admin-url http://${CONTROLLER_VIP}:35357/v3/ --bootstrap-internal-url \
-                http://${CONTROLLER_VIP}:35357/v3/ --bootstrap-public-url http://${CONTROLLER_VIP}:5000/v3/ --bootstrap-region-id RegionOne
-    fi 
+                http://${CONTROLLER_VIP}:35357/v3/ --bootstrap-public-url http://${CONTROLLER_VIP}:5000/v3/ \
+                --bootstrap-region-id RegionOne
+        debug_info "Bootstrap the Identity service"
+    fi
 
     echo $BLUE Configure the Apache HTTP server ... $NO_COLOR
     sed -i "/ServerName www.example.com:80/a\ServerName ${CONTROLLER_VIP}" /etc/httpd/conf/httpd.conf  1>/dev/null
     echo $BLUE Create a link to the /usr/share/keystone/wsgi-keystone.conf file: $NO_COLOR
-    
     ln -s /usr/share/keystone/wsgi-keystone.conf /etc/httpd/conf.d/     1>/dev/null
     
     systemctl enable httpd.service     1>/dev/null 2>&1
     systemctl start httpd.service
-        debug "$?" "Start the httpd.service failed "
+        debug_info "Start the httpd.service "
     if [[ ${#CONTROLLER_IP[*]} -eq 3 ]] && [[ ${MGMT_IP} != ${CONTROLLER_IP[0]} ]];then                                                                                
         debug "notice" "Skip to create keystone administrative account "
     #---execute this function to create openrc file 
@@ -165,7 +171,7 @@ function keystone_main(){
         openstack --os-auth-url http://${CONTROLLER_VIP}:35357/v3 --os-project-domain-name default \
             --os-user-domain-name default --os-project-name admin --os-username admin \
                 --os-auth-type password --os-password ${ADMIN_PASS}  token issue   &&
-            debug "$?"  "As the admin user, request an authentication token Failed "
+            debug_info "As the admin user, request an authentication token "
     
         echo $BLUE As the demo user, request an authentication token  $NO_COLOR
         openstack --os-auth-url http://${CONTROLLER_VIP}:5000/v3 --os-project-domain-name default \
@@ -180,7 +186,7 @@ function keystone_main(){
     
     #Request an authentication token
     openstack token issue
-        debug "$?" "The admin-openrc file which location at $OPENRC_DIR can not be work "
+        debug_info "The admin-openrc file which location at $OPENRC_DIR work verify "
     echo $GREEN Created openrc file and the admin-openrc can be work normally $NO_COLOR 
 }
 
@@ -212,5 +218,3 @@ install.For more info about keystone you can refer /usr/share/doc/openstack-keys
 ================================================================================================================
 $NO_COLOR
 __EOF__
-
-

@@ -87,6 +87,7 @@ __EOF__
         echo $BLUE Populating the database ...  $NO_COLOR
         su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf \
     --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron  1>/dev/null 2>&1
+            debug_info "Populating the neutron database "
         get_database_size neutron $NEUTRON_DBPASS
     #        debug "$?" "Populate the database of neutron failed "
     fi
@@ -94,13 +95,13 @@ __EOF__
     echo $BLUE Restarting nova-api.service nova-scheduler.service nova-conductor.service $NO_COLOR
     systemctl restart openstack-nova-api.service openstack-nova-scheduler.service \
             openstack-nova-conductor.service 
-        debug "$?"  "Restarting openstack-nova-api openstack-nova-scheduler.service \
-            openstack-nova-conductor.service failed "
+        debug_info  "Restarting openstack-nova-api openstack-nova-scheduler.service \
+            openstack-nova-conductor.service"
     
     echo $BLUE Starting neutron-server.service $NO_COLOR
     systemctl enable neutron-server.service 1>/dev/null 2>&1 
     systemctl start  neutron-server.service
-        debug "$?" "Starting neutron-server failed "
+        debug_info "Start neutron-server"
     
     cat 1>&2 <<__EOF__
     $GREEN=====================================================================================
@@ -149,7 +150,7 @@ __EOF__
     systemctl enable openvswitch.service  1>/dev/null 2>&1
     echo $BLUE Starting openvswitch.service $NO_COLOR
     systemctl start openvswitch.service
-         debug "$?" "Starting openvswitch failed "    
+         debug_info "Start openvswitch "
     
     #Copy conf file and edit it 
     cp -f ${CONFIG_FILE_DIR}/etc/compute/neutron/neutron.conf  /etc/neutron
@@ -187,12 +188,12 @@ __EOF__
     
     echo $BLUE Rstarting openstack-nova-compute.service $NO_COLOR
     systemctl restart openstack-nova-compute.service
-        debug "$?" "restart openstack-nova-compute failed after install neutron on compute node "
+        debug_info "restart openstack-nova-compute after install neutron on compute node "
     
     echo $BLUE Starting neutron-openvswitch-agent.service $NO_COLOR
     systemctl enable neutron-openvswitch-agent.service  neutron-ovs-cleanup.service 1>/dev/null 2>&1
     systemctl start neutron-openvswitch-agent.service  
-        debug "$?" "Starting neutron-openvswitch-agent.service failed "
+        debug_info "Start neutron-openvswitch-agent.service"
     
     cat 2>&1 <<__EOF__
     $GREEN=====================================================================================
@@ -229,16 +230,19 @@ function ovs_bridge_create(){
     fi
     
     ovs-vsctl add-br ${br_provider}
+        debug_info "ovs-vsctl add-br ${br_provider}"
     
     echo $BLUE Added the provider network interface:$YELLOW$PROVIDER_INTERFACE$BLUE as a port \
     on the OVS provider bridge ${YELLOW}${br_provider}${NO_COLOR}
     #Replace PROVIDER_INTERFACE with the name of the underlying interface that handles provider networks. For example, eth1
     ovs-vsctl add-port ${br_provider} $PROVIDER_INTERFACE
+        debug_info "ovs-vsctl add-port ${br_provider} $PROVIDER_INTERFACE"
     echo $BLUE Added port $YELLOW$PROVIDER_INTERFACE$BLUE to $br_provider $NO_COLOR 
     
     #Depending on your network interface driver, you may need to disable generic receive offload (GRO) to achieve 
     #suitable throughput between yourinstances and the external network
     ethtool -K $PROVIDER_INTERFACE gro off
+        debug_info "ethtool -K $PROVIDER_INTERFACE gro off"
 }
 
 #------------------------------------------neutron for network node -----------------------
@@ -287,7 +291,7 @@ __EOF__
     
     echo $BLUE Installing openstack-neutron openstack-neutron-ml2 openstack-neutron-openvswitch ... $NO_COLOR
     yum install openstack-neutron openstack-neutron-ml2 openstack-neutron-openvswitch -y 1>/dev/null
-        debug "$?" "Install openstack-neutron openstack-neutron-ml2 openstack-neutron-openvswitch failed "
+        debug_info "Install openstack-neutron openstack-neutron-ml2 openstack-neutron-openvswitch "
     
     #add network node on controller or compute node  
     if [[ $1 = "controller" || $1 = "compute" ]];then 
@@ -332,28 +336,28 @@ __EOF__
     else 
         echo $BLUE Starting the openvswitch.service $NO_COLOR
         systemctl start openvswitch.service
-            debug "$?" "start openvswitch.service failed"
+            debug_info "start openvswitch.service"
     fi
     
     ovs_bridge_create
     
     echo $BLUE Starting neutron-dhcp-agent.service $NO_COLOR
     systemctl start  neutron-dhcp-agent.service 
-        debug "$?" "Start neutron-dhcp-agent failed "
+        debug_info "Start neutron-dhcp-agent "
     
     echo $BLUE Starting neutron-metadata-agent.service $NO_COLOR
     systemctl start  neutron-metadata-agent.service
-        debug "$?" "Start neutron-metadata-agent failed "
+        debug_info "Start neutron-metadata-agent "
     
     echo $BLUE Starting neutron-openvswitch-agent.service $NO_COLOR
     systemctl start  neutron-openvswitch-agent.service
-        debug "$?" "Start neutron-openvswitch-agent failed "
+        debug_info "Start neutron-openvswitch-agent "
     
     #for option 2
     echo $BLUE Starting neutron-l3-agent $NO_COLOR
     systemctl enable neutron-l3-agent.service 1>/dev/null 2>&1
     systemctl start neutron-l3-agent.service
-       debug "$?" "Start neutron-l3-agent failed "
+       debug_info "Start neutron-l3-agent "
     
     cat 2>&1 <<__EOF__
     $GREEN=====================================================================================
@@ -482,7 +486,7 @@ function tenant_network_types(){
         if [[ $1 = "network" ]] || [[ $1 = "compute" ]];then
             echo $BLUE Restarting the neutron-openvswitch-agent.service  openvswitch $NO_COLOR 
             systemctl restart  neutron-openvswitch-agent.service  openvswitch
-                debug "$?" "Restart the neutron-openvswitch-agent.service  openvswitch failed, please check the logs"
+                debug_info "Restart the neutron-openvswitch-agent.service  openvswitch "
         fi
     
     elif [[ ${TENANT_NETWORK_TYPES} = "vlan" ]];then

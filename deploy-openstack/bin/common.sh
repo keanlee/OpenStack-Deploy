@@ -164,30 +164,43 @@ function variable_set(){
 
 #-----------------------------yum repos configuration ---------------------------
 function yum_repos(){
-    if [[ ! -d /etc/yum.repos.d/bak/ ]];then
-        mkdir /etc/yum.repos.d/bak/
+    if [[ ${OS_REPO_USE_DEFAULT} = "true" ]];then
+        if [[ ! -d /etc/yum.repos.d/bak/ ]];then
+            mkdir /etc/yum.repos.d/bak/
+        fi
+        mv /etc/yum.repos.d/* /etc/yum.repos.d/bak/  1>/dev/null 2>&1
     fi
-    mv /etc/yum.repos.d/* /etc/yum.repos.d/bak/  1>/dev/null 2>&1
-    
     cp -f ${THE_VARIABLE_DIR}/repos/* /etc/yum.repos.d/ 1>/dev/null 
     yum clean all 1>/dev/null 2>1&
     echo $BLUE Configuration YUM Repo $NO_COLOR
-        debug "$?" 
+}
+
+function debug_info() {
+    if [[ $? -ne 0 ]]; then
+        echo ${RED}ERROR -\> $1 ${NO_COLOR}
+        echo $RED   -----------------------------------------------------\>  FAILED $NO_COLOR
+        #wechat_alert "" "$1 failed"
+        exit 1
+    else
+        echo ${GREEN}INFO -\> $1 ${NO_COLOR}
+        echo $GREEN -----------------------------------------------------\>  SUCCEEDED $NO_COLOR
+    fi
 }
 
 
 function debug(){
     #print exit reason to help debug
-    if [[ $1 = "warning" ]];then 
+    if [[ $1 = "warning" ]];then
         echo $YELLOW -----------------------------------------------------\> WARNING $NO_COLOR
         echo $YELLOW WARNING:  $2 $NO_COLOR
-    elif [[ $1 = 0 ]];then 
-        echo $GREEN -----------------------------------------------------\>   DONE $NO_COLOR
-    elif [[ $1 = "notice" ]];then
+    elif [[ $1 = 0 ]];then
+        echo $GREEN -----------------------------------------------------\>  SUCCEEDED $NO_COLOR
+    elif [[ $1 = "info" ]] || [[ $1 = "notice" ]];then
         echo $CYAN INFO:  $2 $NO_COLOR
     else
-        echo $RED   -----------------------------------------------------\>  FAILED $NO_COLOR 
+        echo $RED   -----------------------------------------------------\>  FAILED $NO_COLOR
         echo $RED ERROR:  $2 $NO_COLOR
+        #wechat_alert "" "$2" "$3"
         exit 1
     fi
 }
