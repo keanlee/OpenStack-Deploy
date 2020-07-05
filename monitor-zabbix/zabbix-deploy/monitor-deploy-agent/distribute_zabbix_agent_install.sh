@@ -66,7 +66,7 @@ if [[ $1 = "compute" ]];then
     done
 elif [[ $1 = "controller" ]];then
     echo $BLUE copy public key to controller hosts: $NO_COLOR
-    for ips in $(cat ./HOSTs/compute);do
+    for ips in $(cat ./HOSTs/controller);do
         if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
             sed -i "/${ips}/d" ~/.ssh/known_hosts
             ssh-keyscan $ips >> ~/.ssh/known_hosts 
@@ -78,7 +78,7 @@ elif [[ $1 = "controller" ]];then
 
 elif [[ $1 = "agent" ]];then
     echo $BLUE copy public key to network hosts:  $NO_COLOR
-    for ips in $(cat ./HOSTs/compute);do
+    for ips in $(cat ./HOSTs/agent);do
         if [[ $(cat ~/.ssh/known_hosts | grep $ips | wc -l) -ge 2 ]];then        
             sed -i "/${ips}/d" ~/.ssh/known_hosts
             ssh-keyscan $ips >> ~/.ssh/known_hosts 
